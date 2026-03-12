@@ -1,0 +1,15 @@
+# Build artifacts
+publish/
+publish_final/
+publish_normal/
+publish_test/
+*.zip
+*.log
+error.txt
+
+# .NET artifacts
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/

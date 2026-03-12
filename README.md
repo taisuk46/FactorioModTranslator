@@ -1,52 +1,32 @@
-# Gitlab component template
+# Factorio Mod Translator
 
-<!--
-Update this readme with your component details. Replace content in `< >` with your project information.
-For more information:
+Factorio 2.x (Space Age) 対応のMod翻訳ファイルを自動翻訳・管理するWindows向けGUIツールです。
 
-- How to create a CI/CD component: https://docs.gitlab.com/ee/ci/components/#write-a-component
-- How to write a clear README.md file: https://docs.gitlab.com/ee/ci/components/#write-a-clear-readmemd
-- CI/CD Component security best practices: https://docs.gitlab.com/ee/ci/components/#cicd-component-security-best-practices
--->
+## 主な機能
 
-<!-- Uncomment and update the following link to display a release badge: https://docs.gitlab.com/ee/user/project/badges.html#latest-release-badges -->
-<!-- [![Latest Release](https://gitlab.com/<your project path>/-/badges/release.svg)](https://gitlab.com/<your project path>/-/releases) -->
+- **Mod読み込み**: フォルダまたはZIP形式のModを直接読み込み
+- **翻訳エンジン**: DeepL API / Google Translate API に対応
+- **バニラ連携**: Factorio本体の公式訳語を優先的に適用し、用語の一貫性を保持
+- **差分翻訳**: 既存の翻訳ファイルを活かし、未翻訳部分のみを自動抽出して翻訳
+- **用語集管理**: 特定の用語の固定訳や翻訳除外設定が可能
+- **翻訳履歴**: 過去に行った翻訳をSQLiteに保存し、再利用可能
+- **ダークテーマ**: Factorioを彷彿とさせるオレンジ・グレー基調のUI
 
-## Components
+## 技術スタック
 
-### `<Component-name>`
+- C# (.NET 8) / WPF
+- CommunityToolkit.Mvvm (MVVM Pattern)
+- DeepL.net / Google.Cloud.Translation.V2
+- Microsoft.Data.Sqlite
+- System.Security.Cryptography.ProtectedData (APIキー暗号化)
 
-Use this component to `<component-description>`.
+## 使い方
 
-To add this component to your CI/CD pipeline, add the following include entry to your
-project's CI/CD configuration:
+1. アプリを起動し、[Settings] タブで翻訳APIキーを設定します。
+2. [Mod Selection] タブで翻訳したいModのフォルダまたはZIPを選択します。
+3. 翻訳モード、ソース言語（通常はen）、ターゲット言語（通常はja）を選択し [Execute Translation] をクリックします。
+4. [Preview] タブで翻訳結果を確認・修正し、[Save to Mod] で保存します。
 
-```yaml
-include:
-  - component: https://gitlab.com/<your project path>/<name of your template>@<tag>
-```
+## ライセンス
 
-Where `<tag>` is the release tag you want to use ([releases list](https://gitlab.com/<your-project-path>/-/releases)).
-
-## Inputs
-
-The template contains some optional [inputs](https://docs.gitlab.com/ee/ci/yaml/inputs.html):
-
-<!-- Add or update rows if you change the inputs in the template -->
-
-| Input      | Default value    | Description |
-|------------|------------------|-------------|
-| `job_name` | `job-template`   | The job name. |
-| `image`    | `busybox:latest` | The container image to use to run the job. |
-| `stage`    | `test`           | The stage name for the job. |
-
-## Documentation
-
-This project includes a MVC structure to help you get started with [Gitlab CI/CD components](https://docs.gitlab.com/ee/ci/components/).
-The template provides the basic file structure to create your own single component.
-This project should be public, or one of the jobs in the project's pipeline won't work.
-
-## Licence
-
-The licence can be changed. By default this project has the [MIT Licence](./LICENCE).
-<!-- You should update the year and name in the license file. -->
+MIT License
