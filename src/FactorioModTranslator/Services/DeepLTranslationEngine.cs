@@ -22,35 +22,54 @@ namespace FactorioModTranslator.Services
 
         public async Task<string> TranslateAsync(string text, string sourceLang, string targetLang)
         {
+            Log.Info($"TranslateAsync started: sourceLang={sourceLang}, targetLang={targetLang}, textLength={text.Length}");
+            
             var currentKey = _settings.LoadApiKey("DeepL") ?? string.Empty;
             if (_translator == null || _apiKey != currentKey)
             {
+                Log.Info("Initializing or updating DeepL Translator instance.");
                 _apiKey = currentKey;
                 if (string.IsNullOrWhiteSpace(_apiKey)) 
+                {
+                    Log.Warn("DeepL API Key is missing.");
                     throw new InvalidOperationException("DeepL API Key is not set. Please go to Settings.");
+                }
                 
                 _translator = new Translator(_apiKey);
+                Log.Debug("DeepL Translator instance created successfully.");
             }
 
             var options = new TextTranslateOptions();
             var result = await _translator.TranslateTextAsync(text, MapLang(sourceLang), MapLang(targetLang), options);
+            
+            Log.Info($"TranslateAsync completed. ResultLength={result.Text.Length}");
             return result.Text;
         }
 
         public async Task<List<string>> TranslateBatchAsync(IEnumerable<string> texts, string sourceLang, string targetLang)
         {
+            var textList = texts.ToList();
+            Log.Info($"TranslateBatchAsync started: sourceLang={sourceLang}, targetLang={targetLang}, count={textList.Count}");
+
             var currentKey = _settings.LoadApiKey("DeepL") ?? string.Empty;
             if (_translator == null || _apiKey != currentKey)
             {
+                Log.Info("Initializing or updating DeepL Translator instance for batch.");
                 _apiKey = currentKey;
                 if (string.IsNullOrWhiteSpace(_apiKey)) 
+                {
+                    Log.Warn("DeepL API Key is missing for batch.");
                     throw new InvalidOperationException("DeepL API Key is not set. Please go to Settings.");
+                }
                 
                 _translator = new Translator(_apiKey);
+                Log.Debug("DeepL Translator instance created for batch successfully.");
             }
 
             var options = new TextTranslateOptions();
-            var results = await _translator.TranslateTextAsync(texts, MapLang(sourceLang), MapLang(targetLang), options);
+            var results = await _translator.TranslateTextAsync(textList, MapLang(sourceLang), MapLang(targetLang), options);
+            
+            Log.Info("TranslateBatchAsync completed.");
             return results.Select(r => r.Text).ToList();
         }
 

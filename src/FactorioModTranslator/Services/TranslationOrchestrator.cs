@@ -44,15 +44,18 @@ namespace FactorioModTranslator.Services
             string targetLang,
             IProgress<double>? progress = null)
         {
+            Log.Info($"ExecuteTranslationAsync started: mod={mod.Name}, mode={mode}, sourceLang={sourceLang}, targetLang={targetLang}");
             var results = new List<TranslationItem>();
             var sourceFiles = mod.LocaleFiles.Where(f => f.LanguageCode == sourceLang).ToList();
             var targetFiles = mod.LocaleFiles.Where(f => f.LanguageCode == targetLang).ToDictionary(f => Path.GetFileName(f.FilePath));
 
             int totalEntries = sourceFiles.Sum(f => f.Entries.Count);
             int processedCount = 0;
+            Log.Info($"Total entries to process: {totalEntries} across {sourceFiles.Count} files.");
 
             foreach (var cfgFile in sourceFiles)
             {
+                Log.Debug($"Processing file: {cfgFile.FilePath}");
                 var targetFile = targetFiles.GetValueOrDefault(Path.GetFileName(cfgFile.FilePath));
 
                 foreach (var entry in cfgFile.Entries)

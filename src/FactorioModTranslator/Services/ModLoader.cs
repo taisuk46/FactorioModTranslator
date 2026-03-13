@@ -19,8 +19,12 @@ namespace FactorioModTranslator.Services
 
         public ModInfo LoadFromFolder(string path)
         {
+            Log.Info($"LoadFromFolder: {path}");
             if (!Directory.Exists(path))
+            {
+                Log.Error($"Directory not found: {path}");
                 throw new DirectoryNotFoundException($"Directory not found: {path}");
+            }
 
             var modInfo = new ModInfo
             {
@@ -32,22 +36,35 @@ namespace FactorioModTranslator.Services
             string infoPath = Path.Combine(path, "info.json");
             if (File.Exists(infoPath))
             {
+                Log.Debug("Reading info.json");
                 PopulateModMetadata(modInfo, File.ReadAllText(infoPath));
+            }
+            else
+            {
+                Log.Warn("info.json not found in mod folder.");
             }
 
             // Find locale folder
             string localePath = Path.Combine(path, "locale");
             if (Directory.Exists(localePath))
             {
+                int localeCount = 0;
                 foreach (var langDir in Directory.GetDirectories(localePath))
                 {
                     string langCode = Path.GetFileName(langDir);
+                    Log.Debug($"Loading locale files for: {langCode}");
                     foreach (var cfgFile in Directory.GetFiles(langDir, "*.cfg"))
                     {
                         using var stream = File.OpenRead(cfgFile);
                         modInfo.LocaleFiles.Add(_cfgParser.Parse(stream, cfgFile, langCode));
+                        localeCount++;
                     }
                 }
+                Log.Info($"Loaded {localeCount} locale files from folder.");
+            }
+            else
+            {
+                Log.Warn("locale folder not found in mod folder.");
             }
 
             return modInfo;
@@ -110,11 +127,12 @@ namespace FactorioModTranslator.Services
                 if (root.TryGetProperty("title", out var title)) modInfo.Title = title.GetString() ?? "";
                 if (root.TryGetProperty("author", out var author)) modInfo.Author = author.GetString() ?? "";
                 if (root.TryGetProperty("factorio_version", out var fv)) modInfo.FactorioVersion = fv.GetString() ?? "";
+                
+                Log.Debug($"Populated metadata: {modInfo.Name} v{modInfo.Version}");
             }
             catch (Exception ex)
             {
-                // Log or handle JSON error
-                Console.WriteLine($"Error parsing info.json: {ex.Message}");
+                Log.Error("Error parsing info.json", ex);
             }
         }
     }

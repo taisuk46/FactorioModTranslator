@@ -36,62 +36,90 @@ namespace FactorioModTranslator.Services
             {
                 try
                 {
-                    return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_settingsPath)) ?? new AppSettings();
+                    Log.Debug($"Loading settings from {_settingsPath}");
+                    var json = File.ReadAllText(_settingsPath);
+                    var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                    Log.Info("Settings loaded successfully.");
+                    return settings;
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    Log.Error("Failed to load settings file.", ex);
+                }
+            }
+            else
+            {
+                Log.Info("Settings file not found, using defaults.");
             }
             return new AppSettings();
         }
 
         public void SaveSettings(AppSettings settings)
         {
+            Log.Info($"Saving settings to {_settingsPath}");
             _current = settings;
             string directory = Path.GetDirectoryName(_settingsPath)!;
-            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+            if (!Directory.Exists(directory)) 
+            {
+                Log.Debug($"Creating directory: {directory}");
+                Directory.CreateDirectory(directory);
+            }
 
-            File.WriteAllText(_settingsPath, JsonSerializer.Serialize(_current, new JsonSerializerOptions { WriteIndented = true }));
+            var json = JsonSerializer.Serialize(_current, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(_settingsPath, json);
+            Log.Info("Settings saved successfully.");
         }
 
         public void SaveApiKey(string engine, string key)
         {
+            Log.Info($"SaveApiKey started for engine: {engine}");
             try
             {
                 byte[] data = Encoding.UTF8.GetBytes($"{engine}:{key}");
-                // In a real WPF app, use DPAPI. For now, we'll simulate or use a simple obfuscation 
-                // if DPAPI assembly is tricky to reference directly in some environments, 
-                // but standard .NET 8 on Windows has it in System.Security.Cryptography.ProtectedData.
-                
-                // Note: ProtectedData requires System.Security.Cryptography.ProtectedData NuGet package.
-                // I'll add it if it's missing.
                 byte[] encrypted = ProtectedData.Protect(data, null, DataProtectionScope.CurrentUser);
                 
                 string directory = Path.GetDirectoryName(_apiKeyPath)!;
-                if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+                if (!Directory.Exists(directory)) 
+                {
+                    Log.Debug($"Creating directory for keys: {directory}");
+                    Directory.CreateDirectory(directory);
+                }
                 
                 File.WriteAllBytes(_apiKeyPath, encrypted);
+                Log.Info($"API key for {engine} saved successfully.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving API key: {ex.Message}");
+                Log.Error($"Error saving API key for {engine}", ex);
             }
         }
 
         public string? LoadApiKey(string engine)
         {
-            if (!File.Exists(_apiKeyPath)) return null;
+            if (!File.Exists(_apiKeyPath)) 
+            {
+                Log.Debug("API key file not found.");
+                return null;
+            }
+
             try
             {
+                Log.Debug($"Loading API key for engine: {engine}");
                 byte[] encrypted = File.ReadAllBytes(_apiKeyPath);
                 byte[] decrypted = ProtectedData.Unprotect(encrypted, null, DataProtectionScope.CurrentUser);
                 string content = Encoding.UTF8.GetString(decrypted);
                 
-                // content format is "Engine:Key"
                 if (content.StartsWith($"{engine}:"))
                 {
+                    Log.Debug($"API key for {engine} loaded.");
                     return content.Substring(engine.Length + 1);
                 }
+                Log.Warn($"API key for {engine} not found in key file.");
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Log.Error($"Error loading API key for {engine}", ex);
+            }
             return null;
         }
     }

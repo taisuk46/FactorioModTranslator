@@ -1,4 +1,5 @@
 using System.Windows;
+using FactorioModTranslator.Services;
 
 namespace FactorioModTranslator
 {
@@ -6,13 +7,19 @@ namespace FactorioModTranslator
     {
         public App()
         {
+            LogService.Instance.Initialize();
+
             AppDomain.CurrentDomain.UnhandledException += (s, e) => {
-                MessageBox.Show("Fatal Error: " + e.ExceptionObject.ToString(), "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                var message = "Fatal Unhandled Exception";
+                Log.Error(message, (Exception)e.ExceptionObject);
+                MessageBox.Show(message + ": " + e.ExceptionObject.ToString(), "Fatal Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
 
             this.DispatcherUnhandledException += (s, e) => {
                 e.Handled = true;
-                MessageBox.Show("Dispatcher Error: " + e.Exception.ToString(), "Dispatcher Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                var message = "Dispatcher Unhandled Exception";
+                Log.Error(message, e.Exception);
+                MessageBox.Show(message + ": " + e.Exception.ToString(), "Dispatcher Error", MessageBoxButton.OK, MessageBoxImage.Error);
             };
         }
     }
