@@ -11,6 +11,7 @@ namespace FactorioModTranslator.ViewModels
         private readonly LocalizationService _loc = LocalizationService.Instance;
 
         [ObservableProperty] private string _appTitle = string.Empty;
+        [ObservableProperty] private int _selectedTabIndex;
         
         public ModSelectionViewModel ModSelection { get; }
         public TranslationPreviewViewModel TranslationPreview { get; }

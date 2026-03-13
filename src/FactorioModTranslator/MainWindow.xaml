@@ -22,7 +22,7 @@
         </Border>
 
         <!-- Main Content -->
-        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="10">
+        <TabControl Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="10" SelectedIndex="{Binding SelectedTabIndex}">
             <TabItem Header="Mod Selection">
                 <views:ModSelectionView DataContext="{Binding ModSelection}"/>
             </TabItem>

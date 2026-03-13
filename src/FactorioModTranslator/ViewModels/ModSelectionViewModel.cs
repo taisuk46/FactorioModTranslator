@@ -29,6 +29,8 @@ namespace FactorioModTranslator.ViewModels
         public IAsyncRelayCommand SelectZipCommand { get; }
         public IAsyncRelayCommand StartTranslationCommand { get; }
 
+        public Action<List<TranslationItem>, ModInfo, string>? OnTranslationComplete { get; set; }
+
         public ModSelectionViewModel(ModLoader modLoader, TranslationOrchestrator orchestrator, SettingsService settings)
         {
             _modLoader = modLoader;
@@ -91,7 +93,7 @@ namespace FactorioModTranslator.ViewModels
                     LoadedMod, SelectedMode, SourceLanguage, TargetLanguage, progressReporter);
 
                 StatusMessage = $"Translation complete! {results.Count} items processed.";
-                // Navigation to results view would happen here via message or event
+                OnTranslationComplete?.Invoke(results, LoadedMod, TargetLanguage);
             }
             catch (Exception ex)
             {

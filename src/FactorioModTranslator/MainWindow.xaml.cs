@@ -17,8 +17,7 @@ public partial class MainWindow : Window
         var settingsService = new SettingsService();
         var vanillaService = new VanillaTranslationService(cfgParser);
 
-        var apiKey = settingsService.LoadApiKey("DeepL") ?? "";
-        var engine = new DeepLTranslationEngine(apiKey);
+        var engine = new DeepLTranslationEngine(settingsService);
 
         var orchestrator = new TranslationOrchestrator(engine, vanillaService, glossaryService, historyService);
 
@@ -28,6 +27,12 @@ public partial class MainWindow : Window
         var glossaryVM = new GlossaryViewModel(glossaryService);
 
         var mainVM = new MainViewModel(modSelectionVM, previewVM, settingsVM, glossaryVM);
+
+        modSelectionVM.OnTranslationComplete = (results, mod, targetLang) => 
+        {
+            previewVM.LoadItems(results, mod, targetLang);
+            mainVM.SelectedTabIndex = 1; // Switch to Preview tab
+        };
 
         this.DataContext = mainVM;
     }

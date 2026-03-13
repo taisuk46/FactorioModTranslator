@@ -10,23 +10,22 @@ namespace FactorioModTranslator.Services
     public class DeepLTranslationEngine : ITranslationEngine
     {
         private Translator? _translator;
-        private readonly string _apiKey;
+        private string _apiKey = string.Empty;
+        private readonly SettingsService _settings;
 
         public string Name => "DeepL";
 
-        public DeepLTranslationEngine(string apiKey)
+        public DeepLTranslationEngine(SettingsService settings)
         {
-            _apiKey = apiKey;
-            if (!string.IsNullOrWhiteSpace(_apiKey))
-            {
-                _translator = new Translator(_apiKey);
-            }
+            _settings = settings;
         }
 
         public async Task<string> TranslateAsync(string text, string sourceLang, string targetLang)
         {
-            if (_translator == null)
+            var currentKey = _settings.LoadApiKey("DeepL") ?? string.Empty;
+            if (_translator == null || _apiKey != currentKey)
             {
+                _apiKey = currentKey;
                 if (string.IsNullOrWhiteSpace(_apiKey)) 
                     throw new InvalidOperationException("DeepL API Key is not set. Please go to Settings.");
                 
@@ -40,8 +39,10 @@ namespace FactorioModTranslator.Services
 
         public async Task<List<string>> TranslateBatchAsync(IEnumerable<string> texts, string sourceLang, string targetLang)
         {
-            if (_translator == null)
+            var currentKey = _settings.LoadApiKey("DeepL") ?? string.Empty;
+            if (_translator == null || _apiKey != currentKey)
             {
+                _apiKey = currentKey;
                 if (string.IsNullOrWhiteSpace(_apiKey)) 
                     throw new InvalidOperationException("DeepL API Key is not set. Please go to Settings.");
                 
