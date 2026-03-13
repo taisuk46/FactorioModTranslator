@@ -21,28 +21,49 @@ namespace FactorioModTranslator.Services
 
         public void Load()
         {
+            Log.Debug($"GlossaryService.Load started from: {_filePath}");
             if (File.Exists(_filePath))
             {
                 try
                 {
                     string json = File.ReadAllText(_filePath);
                     _entries = JsonSerializer.Deserialize<List<GlossaryEntry>>(json) ?? new();
+                    Log.Info($"Loaded {_entries.Count} glossary entries.");
                 }
-                catch { _entries = new(); }
+                catch (Exception ex)
+                {
+                    Log.Error("Failed to load glossary. Initializing empty list.", ex);
+                    _entries = new();
+                }
+            }
+            else
+            {
+                Log.Info("Glossary file not found. Starting with empty glossary.");
+                _entries = new();
             }
         }
 
         public void Save()
         {
-            string directory = Path.GetDirectoryName(_filePath)!;
-            if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
+            Log.Debug($"GlossaryService.Save started to: {_filePath}");
+            try
+            {
+                string directory = Path.GetDirectoryName(_filePath)!;
+                if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
 
-            string json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(_filePath, json);
+                string json = JsonSerializer.Serialize(_entries, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(_filePath, json);
+                Log.Info($"Saved {_entries.Count} glossary entries.");
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to save glossary", ex);
+            }
         }
 
         public void AddEntry(GlossaryEntry entry)
         {
+            Log.Info($"GlossaryService.AddEntry: {entry.SourceTerm} -> {entry.TargetTerm}");
             _entries.RemoveAll(e => e.SourceTerm == entry.SourceTerm && e.SourceLang == entry.SourceLang && e.TargetLang == entry.TargetLang);
             _entries.Add(entry);
             Save();
@@ -50,6 +71,7 @@ namespace FactorioModTranslator.Services
 
         public void RemoveEntry(string sourceTerm)
         {
+            Log.Info($"GlossaryService.RemoveEntry: {sourceTerm}");
             _entries.RemoveAll(e => e.SourceTerm == sourceTerm);
             Save();
         }

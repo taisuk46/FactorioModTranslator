@@ -31,6 +31,7 @@ namespace FactorioModTranslator.ViewModels
 
         public void LoadItems(List<TranslationItem> items, ModInfo mod, string targetLang)
         {
+            Log.Info($"LoadItems called: {items.Count} items, Mod: {mod.Title}, TargetLang: {targetLang}");
             Items = new ObservableCollection<TranslationItem>(items);
             _loadedMod = mod;
             _targetLang = targetLang;
@@ -38,8 +39,13 @@ namespace FactorioModTranslator.ViewModels
 
         private async Task SaveAsync()
         {
-            if (_loadedMod == null || string.IsNullOrEmpty(_targetLang)) return;
+            if (_loadedMod == null || string.IsNullOrEmpty(_targetLang))
+            {
+                Log.Warn($"SaveAsync aborted: _loadedMod is null ({_loadedMod == null}) or _targetLang is empty ({string.IsNullOrEmpty(_targetLang)})");
+                return;
+            }
 
+            Log.Info($"Saving translation to mod: {_loadedMod.Title}, TargetLang: {_targetLang}");
             IsSaving = true;
             try
             {
@@ -48,9 +54,14 @@ namespace FactorioModTranslator.ViewModels
                 var groupedItems = Items.GroupBy(i => "translation.cfg"); // Simplified: one file per mod
 
                 string localePath = Path.Combine(_loadedMod.SourcePath, "locale", _targetLang);
-                if (!Directory.Exists(localePath)) Directory.CreateDirectory(localePath);
+                if (!Directory.Exists(localePath))
+                {
+                    Log.Debug($"Creating locale directory: {localePath}");
+                    Directory.CreateDirectory(localePath);
+                }
 
                 string filePath = Path.Combine(localePath, "translation.cfg");
+                Log.Info($"Target file path: {filePath}");
 
                 var cfgFile = new CfgFile
                 {
@@ -73,8 +84,13 @@ namespace FactorioModTranslator.ViewModels
 
                 using var stream = File.Create(filePath);
                 _cfgParser.Write(cfgFile, stream);
+                Log.Info("Translation file written successfully.");
 
                 // Success message or event
+            }
+            catch (Exception ex)
+            {
+                Log.Error("Failed to save translation file", ex);
             }
             finally
             {

@@ -16,6 +16,7 @@ namespace FactorioModTranslator.Services
         /// </summary>
         public CfgFile Parse(Stream stream, string filePath = "", string langCode = "")
         {
+            Log.Debug($"CfgParser.Parse started: file={Path.GetFileName(filePath)}, lang={langCode}");
             var cfgFile = new CfgFile
             {
                 FilePath = filePath,
@@ -84,6 +85,7 @@ namespace FactorioModTranslator.Services
                 }
             }
 
+            Log.Debug($"CfgParser.Parse completed: {cfgFile.Entries.Count} entries found.");
             return cfgFile;
         }
 
@@ -92,6 +94,7 @@ namespace FactorioModTranslator.Services
         /// </summary>
         public void Write(CfgFile cfgFile, Stream stream)
         {
+            Log.Debug($"CfgParser.Write started: file={Path.GetFileName(cfgFile.FilePath)}, entries={cfgFile.Entries.Count}");
             using var writer = new StreamWriter(stream, new UTF8Encoding(false)); // Factorio expects UTF-8 without BOM usually
 
             // Write header comments
@@ -123,6 +126,7 @@ namespace FactorioModTranslator.Services
                 }
                 writer.WriteLine();
             }
+            Log.Debug("CfgParser.Write completed.");
         }
     }
 }

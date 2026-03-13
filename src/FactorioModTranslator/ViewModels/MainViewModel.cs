@@ -38,7 +38,9 @@ namespace FactorioModTranslator.ViewModels
         private void SwitchLanguage()
         {
             var current = _loc.CurrentCulture.TwoLetterISOLanguageName;
-            _loc.CurrentCulture = new System.Globalization.CultureInfo(current == "ja" ? "en" : "ja");
+            var next = current == "ja" ? "en" : "ja";
+            Log.Info($"Switching language from {current} to {next}");
+            _loc.CurrentCulture = new System.Globalization.CultureInfo(next);
             AppTitle = _loc["AppTitle"];
         }
     }

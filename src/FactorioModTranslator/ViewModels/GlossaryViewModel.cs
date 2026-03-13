@@ -29,8 +29,13 @@ namespace FactorioModTranslator.ViewModels
 
         private void AddEntry()
         {
-            if (string.IsNullOrWhiteSpace(NewSourceTerm) || string.IsNullOrWhiteSpace(NewTargetTerm)) return;
+            if (string.IsNullOrWhiteSpace(NewSourceTerm) || string.IsNullOrWhiteSpace(NewTargetTerm))
+            {
+                Log.Warn("AddEntry aborted: Source or Target term is empty.");
+                return;
+            }
 
+            Log.Info($"Adding glossary entry: {NewSourceTerm} -> {NewTargetTerm}");
             var entry = new GlossaryEntry
             {
                 SourceTerm = NewSourceTerm,
@@ -42,15 +47,23 @@ namespace FactorioModTranslator.ViewModels
             _glossaryService.AddEntry(entry);
             Entries.Add(entry);
             
+            Log.Debug("Glossary entry added and saved.");
             NewSourceTerm = string.Empty;
             NewTargetTerm = string.Empty;
         }
 
         private void DeleteEntry(GlossaryEntry? entry)
         {
-            if (entry == null) return;
+            if (entry == null)
+            {
+                Log.Warn("DeleteEntry called with null entry.");
+                return;
+            }
+
+            Log.Info($"Deleting glossary entry: {entry.SourceTerm}");
             _glossaryService.RemoveEntry(entry.SourceTerm);
             Entries.Remove(entry);
+            Log.Debug("Glossary entry removed.");
         }
     }
 }

@@ -44,44 +44,65 @@ namespace FactorioModTranslator.ViewModels
 
         private async Task SelectFolderAsync()
         {
+            Log.Info("SelectFolderAsync triggered.");
             var dialog = new OpenFolderDialog(); // Requires .NET 8.0 WPF or later
             if (dialog.ShowDialog() == true)
             {
+                Log.Info($"Folder selected: {dialog.FolderName}");
                 try
                 {
                     LoadedMod = _modLoader.LoadFromFolder(dialog.FolderName);
                     StatusMessage = $"Loaded: {LoadedMod.Title} ({LoadedMod.Version})";
+                    Log.Info($"Mod loaded successfully: {LoadedMod.Title}");
                     StartTranslationCommand.NotifyCanExecuteChanged();
                 }
                 catch (Exception ex)
                 {
+                    Log.Error("Failed to load mod from folder", ex);
                     StatusMessage = $"Error: {ex.Message}";
                 }
+            }
+            else
+            {
+                Log.Info("Folder selection cancelled.");
             }
         }
 
         private async Task SelectZipAsync()
         {
+            Log.Info("SelectZipAsync triggered.");
             var dialog = new OpenFileDialog { Filter = "Factorio Mod ZIP (*.zip)|*.zip" };
             if (dialog.ShowDialog() == true)
             {
+                Log.Info($"ZIP selected: {dialog.FileName}");
                 try
                 {
                     LoadedMod = _modLoader.LoadFromZip(dialog.FileName);
                     StatusMessage = $"Loaded ZIP: {LoadedMod.Title}";
+                    Log.Info($"Mod loaded successfully from ZIP: {LoadedMod.Title}");
                     StartTranslationCommand.NotifyCanExecuteChanged();
                 }
                 catch (Exception ex)
                 {
+                    Log.Error("Failed to load mod from ZIP", ex);
                     StatusMessage = $"Error: {ex.Message}";
                 }
+            }
+            else
+            {
+                Log.Info("ZIP selection cancelled.");
             }
         }
 
         private async Task StartTranslationAsync()
         {
-            if (LoadedMod == null) return;
+            if (LoadedMod == null)
+            {
+                Log.Warn("StartTranslationAsync called but LoadedMod is null.");
+                return;
+            }
 
+            Log.Info($"Starting translation for {LoadedMod.Title}. Mode: {SelectedMode}, Source: {SourceLanguage}, Target: {TargetLanguage}");
             IsTranslating = true;
             Progress = 0;
             StatusMessage = "Translating...";
@@ -92,11 +113,13 @@ namespace FactorioModTranslator.ViewModels
                 var results = await _orchestrator.ExecuteTranslationAsync(
                     LoadedMod, SelectedMode, SourceLanguage, TargetLanguage, progressReporter);
 
+                Log.Info($"Translation completed. Items: {results.Count}");
                 StatusMessage = $"Translation complete! {results.Count} items processed.";
                 OnTranslationComplete?.Invoke(results, LoadedMod, TargetLanguage);
             }
             catch (Exception ex)
             {
+                Log.Error("Translation execution failed", ex);
                 StatusMessage = $"Translation failed: {ex.Message}";
             }
             finally
