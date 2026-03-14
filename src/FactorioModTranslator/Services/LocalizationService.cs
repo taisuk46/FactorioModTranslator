@@ -52,6 +52,10 @@ namespace FactorioModTranslator.Services
                 "History" => isJa ? "履歴" : "History",
                 "Mode" => isJa ? "モード" : "Mode",
                 "Engine" => isJa ? "エンジン" : "Engine",
+                "TranslationMode_NewTranslation" => isJa ? "新規翻訳" : "New Translation",
+                "TranslationMode_DiffTranslation" => isJa ? "差分翻訳" : "Diff Translation",
+                "TranslationMode_OverwriteUpdate" => isJa ? "上書き更新" : "Overwrite Update",
+                "TranslationMode_ManualEdit" => isJa ? "手動編集" : "Manual Edit",
                 _ => key
             };
         }

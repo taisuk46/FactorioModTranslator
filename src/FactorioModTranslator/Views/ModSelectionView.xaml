@@ -4,10 +4,19 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:converters="clr-namespace:FactorioModTranslator.Converters"
+             xmlns:models="clr-namespace:FactorioModTranslator.Models"
+             xmlns:System="clr-namespace:System;assembly=mscorlib"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:TranslationModeConverter x:Key="TranslationModeConverter"/>
+        
+        <ObjectDataProvider x:Key="TranslationModes" MethodName="GetValues" ObjectType="{x:Type System:Enum}">
+            <ObjectDataProvider.MethodParameters>
+                <x:Type TypeName="models:TranslationMode"/>
+            </ObjectDataProvider.MethodParameters>
+        </ObjectDataProvider>
     </UserControl.Resources>
     
     <Grid Margin="20">
@@ -53,6 +62,19 @@
                     </ComboBox>
                 </StackPanel>
             </Grid>
+
+            <StackPanel Margin="0,20,0,0">
+                <TextBlock Text="Translation Mode" Foreground="{StaticResource MutedTextBrush}"/>
+                <ComboBox ItemsSource="{Binding Source={StaticResource TranslationModes}}" 
+                          SelectedItem="{Binding SelectedMode}"
+                          Width="200" HorizontalAlignment="Left">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource TranslationModeConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
 
             <Button Content="Execute Translation" Command="{Binding StartTranslationCommand}" Height="40" Margin="0,30,0,0" FontSize="16" FontWeight="Bold"/>
             

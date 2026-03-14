@@ -39,11 +39,18 @@ namespace FactorioModTranslator.Services
                 Log.Debug("DeepL Translator instance created successfully.");
             }
 
-            var options = new TextTranslateOptions();
-            var result = await _translator.TranslateTextAsync(text, MapLang(sourceLang, false), MapLang(targetLang, true), options);
+            var wrappedText = FactorioStringFormatter.WrapTags(text);
+            var options = new TextTranslateOptions
+            {
+                TagHandling = "xml",
+                IgnoreTags = { "keep" }
+            };
+
+            var result = await _translator.TranslateTextAsync(wrappedText, MapLang(sourceLang, false), MapLang(targetLang, true), options);
             
-            Log.Info($"TranslateAsync completed. ResultLength={result.Text.Length}");
-            return result.Text;
+            var finalResult = FactorioStringFormatter.UnwrapTags(result.Text);
+            Log.Info($"TranslateAsync completed. ResultLength={finalResult.Length}");
+            return finalResult;
         }
 
         public async Task<List<string>> TranslateBatchAsync(IEnumerable<string> texts, string sourceLang, string targetLang)
@@ -66,11 +73,17 @@ namespace FactorioModTranslator.Services
                 Log.Debug("DeepL Translator instance created for batch successfully.");
             }
 
-            var options = new TextTranslateOptions();
-            var results = await _translator.TranslateTextAsync(textList, MapLang(sourceLang, false), MapLang(targetLang, true), options);
+            var wrappedTexts = textList.Select(FactorioStringFormatter.WrapTags).ToList();
+            var options = new TextTranslateOptions
+            {
+                TagHandling = "xml",
+                IgnoreTags = { "keep" }
+            };
+
+            var results = await _translator.TranslateTextAsync(wrappedTexts, MapLang(sourceLang, false), MapLang(targetLang, true), options);
             
             Log.Info("TranslateBatchAsync completed.");
-            return results.Select(r => r.Text).ToList();
+            return results.Select(r => FactorioStringFormatter.UnwrapTags(r.Text)).ToList();
         }
 
         public void SetGlossary(IEnumerable<GlossaryEntry> glossary)
