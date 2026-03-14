@@ -30,6 +30,7 @@ async function init() {
     // Initial load of content
     loadGlossary();
     loadHistory();
+    populateSettings();
   } catch (e) {
     await warn(`Backend not available (Tauri check): ${e}`);
     // Fallback settings for UI preview
@@ -283,5 +284,38 @@ async function loadHistory() {
     showError("Failed to load history");
   }
 }
+
+async function populateSettings() {
+  const engineSelect = document.getElementById('engine-select');
+  if (engineSelect && currentSettings) {
+    engineSelect.value = currentSettings.selected_engine;
+  }
+}
+
+document.getElementById('btn-save-key').addEventListener('click', async () => {
+  const engineSelect = document.getElementById('engine-select');
+  const apiKeyInput = document.getElementById('api-key-input');
+  
+  const selectedEngine = engineSelect.value;
+  const apiKey = apiKeyInput.value.trim();
+
+  try {
+    // 1. Save engine type in AppSettings
+    currentSettings.selected_engine = selectedEngine;
+    await invoke('save_settings', { settings: currentSettings });
+
+    // 2. Save API key securely if provided
+    if (apiKey) {
+      const engineName = selectedEngine === 'DeepL' ? 'DeepL' : 'Google';
+      await invoke('save_api_key', { engine: engineName, key: apiKey });
+      apiKeyInput.value = ''; // Clear for security
+    }
+
+    showStatus("Settings saved successfully!");
+  } catch (e) {
+    await error(`Failed to save settings: ${e}`);
+    showError("Failed to save settings: " + e);
+  }
+});
 
 window.addEventListener('DOMContentLoaded', init);
