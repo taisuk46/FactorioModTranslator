@@ -24,7 +24,7 @@ namespace FactorioModTranslator.ViewModels
             Entries = new ObservableCollection<GlossaryEntry>(_glossaryService.GetAllEntries());
 
             AddCommand = new RelayCommand(AddEntry);
-            DeleteCommand = new RelayCommand<GlossaryEntry>(DeleteEntry);
+            DeleteCommand = new RelayCommand<object>(o => DeleteEntry(o as GlossaryEntry));
         }
 
         private void AddEntry()
@@ -56,7 +56,6 @@ namespace FactorioModTranslator.ViewModels
         {
             if (entry == null)
             {
-                Log.Warn("DeleteEntry called with null entry.");
                 return;
             }
 

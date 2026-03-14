@@ -40,7 +40,7 @@ namespace FactorioModTranslator.Services
             }
 
             var options = new TextTranslateOptions();
-            var result = await _translator.TranslateTextAsync(text, MapLang(sourceLang), MapLang(targetLang), options);
+            var result = await _translator.TranslateTextAsync(text, MapLang(sourceLang, false), MapLang(targetLang, true), options);
             
             Log.Info($"TranslateAsync completed. ResultLength={result.Text.Length}");
             return result.Text;
@@ -67,7 +67,7 @@ namespace FactorioModTranslator.Services
             }
 
             var options = new TextTranslateOptions();
-            var results = await _translator.TranslateTextAsync(textList, MapLang(sourceLang), MapLang(targetLang), options);
+            var results = await _translator.TranslateTextAsync(textList, MapLang(sourceLang, false), MapLang(targetLang, true), options);
             
             Log.Info("TranslateBatchAsync completed.");
             return results.Select(r => r.Text).ToList();
@@ -78,11 +78,13 @@ namespace FactorioModTranslator.Services
             // Future implementation
         }
 
-        private string MapLang(string lang)
+        private string MapLang(string lang, bool isTarget)
         {
             lang = lang.ToUpper();
-            if (lang == "EN") return "EN-US";
-            if (lang == "JA") return "JA";
+            if (lang == "EN")
+            {
+                return isTarget ? "EN-US" : "EN";
+            }
             return lang;
         }
     }

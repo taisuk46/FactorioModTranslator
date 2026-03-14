@@ -11,12 +11,12 @@ namespace FactorioModTranslator.Services
         private readonly string _dbPath;
         private readonly string _connectionString;
 
-        public TranslationHistoryService()
+        public TranslationHistoryService(string? customDbPath = null)
         {
             string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FactorioModTranslator");
             if (!Directory.Exists(appData)) Directory.CreateDirectory(appData);
             
-            _dbPath = Path.Combine(appData, "history.db");
+            _dbPath = customDbPath ?? Path.Combine(appData, "history.db");
             _connectionString = $"Data Source={_dbPath}";
             
             InitializeDatabase();
@@ -46,7 +46,7 @@ namespace FactorioModTranslator.Services
             command.ExecuteNonQuery();
         }
 
-        public void SaveRecord(TranslationRecord record)
+        public virtual void SaveRecord(TranslationRecord record)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
@@ -70,7 +70,7 @@ namespace FactorioModTranslator.Services
             command.ExecuteNonQuery();
         }
 
-        public string? GetPreviousTranslation(string modName, string section, string key, string targetLang)
+        public virtual string? GetPreviousTranslation(string modName, string section, string key, string targetLang)
         {
             using var connection = new SqliteConnection(_connectionString);
             connection.Open();
@@ -90,7 +90,7 @@ namespace FactorioModTranslator.Services
             return null;
         }
 
-        public List<TranslationRecord> GetAllHistory()
+        public virtual List<TranslationRecord> GetAllHistory()
         {
             var results = new List<TranslationRecord>();
             using var connection = new SqliteConnection(_connectionString);

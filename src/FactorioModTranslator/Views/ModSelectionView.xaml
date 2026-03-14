@@ -39,7 +39,7 @@
 
                 <StackPanel Grid.Column="0">
                     <TextBlock Text="Source Language" Foreground="{StaticResource MutedTextBrush}"/>
-                    <ComboBox SelectedItem="{Binding SourceLanguage}" Width="100" HorizontalAlignment="Left">
+                    <ComboBox SelectedValue="{Binding SourceLanguage}" SelectedValuePath="Content" Width="100" HorizontalAlignment="Left">
                         <ComboBoxItem Content="en"/>
                         <ComboBoxItem Content="ja"/>
                     </ComboBox>
@@ -47,7 +47,7 @@
 
                 <StackPanel Grid.Column="1">
                     <TextBlock Text="Target Language" Foreground="{StaticResource MutedTextBrush}"/>
-                    <ComboBox SelectedItem="{Binding TargetLanguage}" Width="100" HorizontalAlignment="Left">
+                    <ComboBox SelectedValue="{Binding TargetLanguage}" SelectedValuePath="Content" Width="100" HorizontalAlignment="Left">
                         <ComboBoxItem Content="ja"/>
                         <ComboBoxItem Content="en"/>
                     </ComboBox>

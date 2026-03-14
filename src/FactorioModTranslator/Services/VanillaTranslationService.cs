@@ -92,21 +92,21 @@ namespace FactorioModTranslator.Services
             }
         }
 
-        public string? MatchByKey(string section, string key)
+        public virtual string? MatchByKey(string section, string key)
         {
             if (_keyToValue.TryGetValue($"{section}.{key}", out var value))
                 return value;
             return null;
         }
 
-        public string? MatchByText(string sourceText)
+        public virtual string? MatchByText(string sourceText)
         {
             if (_textToValue.TryGetValue(sourceText, out var value))
                 return value;
             return null;
         }
 
-        public List<string> GetContextHints(string sourceText)
+        public virtual List<string> GetContextHints(string sourceText)
         {
             // Simple logic: return top 3 matches that contain the source text or are similar
             return _textToValue.Keys

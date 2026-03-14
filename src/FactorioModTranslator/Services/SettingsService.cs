@@ -22,11 +22,11 @@ namespace FactorioModTranslator.Services
 
         public AppSettings Current => _current;
 
-        public SettingsService()
+        public SettingsService(string? customSettingsPath = null, string? customKeyPath = null)
         {
             string appData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "FactorioModTranslator");
-            _settingsPath = Path.Combine(appData, "settings.json");
-            _apiKeyPath = Path.Combine(appData, "keys.dat");
+            _settingsPath = customSettingsPath ?? Path.Combine(appData, "settings.json");
+            _apiKeyPath = customKeyPath ?? Path.Combine(appData, "keys.dat");
             _current = LoadSettings();
         }
 

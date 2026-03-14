@@ -81,7 +81,7 @@ namespace FactorioModTranslator.Services
         /// <summary>
         /// Applies glossary replacements to the text.
         /// </summary>
-        public string ApplyGlossary(string text, string srcLang, string tgtLang)
+        public virtual string ApplyGlossary(string text, string srcLang, string tgtLang)
         {
             foreach (var entry in _entries.Where(e => e.SourceLang == srcLang && e.TargetLang == tgtLang))
             {
