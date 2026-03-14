@@ -1,0 +1,47 @@
+    Checking factoriomodtranslator v0.1.0 (C:\Users\taisu\.gemini\antigravity\project\factoriomodtranslator_app\src-tauri)
+warning: unused import: `BufReader`
+ --> src\services\cfg_parser.rs:1:24
+  |
+1 | use std::io::{BufRead, BufReader, Write};
+  |                        ^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `Serialize`
+ --> src\services\mod_loader.rs:4:26
+  |
+4 | use serde::{Deserialize, Serialize};
+  |                          ^^^^^^^^^
+
+warning: unused import: `crate::models::cfg::CfgFile`
+ --> src\services\mod_loader.rs:7:5
+  |
+7 | use crate::models::cfg::CfgFile;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `PathBuf`
+ --> src\services\vanilla_translation_service.rs:3:23
+  |
+3 | use std::path::{Path, PathBuf};
+  |                       ^^^^^^^
+
+warning: unused import: `Serialize`
+ --> src\services\translation_engines.rs:2:26
+  |
+2 | use serde::{Deserialize, Serialize};
+  |                          ^^^^^^^^^
+
+warning: unused import: `std::sync::Mutex`
+ --> src\commands\mod.rs:2:5
+  |
+2 | use std::sync::Mutex;
+  |     ^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::sync::Mutex`
+ --> src\lib.rs:5:5
+  |
+5 | use std::sync::Mutex; // This might still be needed if used elsewhere, but let's check. Actually no, I'll remove it.
+  |     ^^^^^^^^^^^^^^^^
+
+warning: `factoriomodtranslator` (lib) generated 7 warnings (run `cargo fix --lib -p factoriomodtranslator` to apply 7 suggestions)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.73s

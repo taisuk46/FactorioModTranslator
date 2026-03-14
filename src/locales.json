@@ -1,0 +1,34 @@
+{
+  "ja": {
+    "AppTitle": "Factorio Mod 自動翻訳ツール",
+    "TabModSelection": "Mod選択",
+    "TabPreview": "プレビュー",
+    "TabGlossary": "用語集",
+    "TabHistory": "履歴",
+    "TabSettings": "設定",
+    "TitleModSelection": "ModフォルダまたはZIPを選択",
+    "LabelDropMod": "ここにModをドロップするか、クリックして選択",
+    "BtnBrowse": "参照...",
+    "BtnTranslate": "翻訳実行",
+    "BtnSaveMod": "Modを保存",
+    "LabelEngine": "翻訳エンジン",
+    "LabelApiKey": "APIキー",
+    "BtnSaveKey": "キーを保存"
+  },
+  "en": {
+    "AppTitle": "Factorio Mod Auto-Translator",
+    "TabModSelection": "Mod Selection",
+    "TabPreview": "Preview",
+    "TabGlossary": "Glossary",
+    "TabHistory": "History",
+    "TabSettings": "Settings",
+    "TitleModSelection": "Select Mod Folder or Zip",
+    "LabelDropMod": "Click to select or drag & drop",
+    "BtnBrowse": "Browse...",
+    "BtnTranslate": "Translate All",
+    "BtnSaveMod": "Save Mod",
+    "LabelEngine": "Translation Engine",
+    "LabelApiKey": "API Key",
+    "BtnSaveKey": "Save Key"
+  }
+}

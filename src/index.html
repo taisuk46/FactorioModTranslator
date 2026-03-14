@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Factorio Mod Translator</title>
+    <link rel="stylesheet" href="index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <div class="logo-container">
+                <div class="logo-icon"></div>
+                <h1 id="app-title">Factorio Mod Translator</h1>
+            </div>
+            <div id="status-bar">Ready</div>
+        </header>
+        
+        <nav id="tabs">
+            <div class="tab active" data-view="mod-selection" id="tab-mod-selection">Mod Selection</div>
+            <div class="tab" data-view="translation-preview" id="tab-translation-preview">Preview</div>
+            <div class="tab" data-view="glossary" id="tab-glossary">Glossary</div>
+            <div class="tab" data-view="history" id="tab-history">History</div>
+            <div class="tab" data-view="settings" id="tab-settings">Settings</div>
+        </nav>
+
+        <main>
+            <section id="mod-selection" class="view active">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title" id="title-mod-selection">Mod Project</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="upload-area" id="drop-zone">
+                            <p id="label-drop-mod">Drag & Drop Mod Folder or ZIP here</p>
+                            <input type="file" id="mod-input" style="display: none;">
+                            <button class="btn btn-primary" id="btn-browse">Browse Files</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="translation-preview" class="view">
+                <div class="toolbar">
+                    <button class="btn btn-primary" id="btn-translate">Translate All</button>
+                    <button class="btn" id="btn-save-mod">Save Translated Mod</button>
+                    <div class="spacer" style="flex: 1;"></div>
+                    <div id="progress-indicator"></div>
+                </div>
+                <div id="translation-list" class="data-container"></div>
+            </section>
+
+            <section id="glossary" class="view">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Term Glossary</h2>
+                        <button class="btn btn-primary btn-sm" id="btn-add-glossary">+ New Term</button>
+                    </div>
+                    <div class="panel-body" id="glossary-list"></div>
+                </div>
+            </section>
+
+            <section id="history" class="view">
+                <div class="panel">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Translation History</h2>
+                    </div>
+                    <div class="panel-body" id="history-list"></div>
+                </div>
+            </section>
+
+            <section id="settings" class="view">
+                <div class="panel" style="max-width: 600px; margin: 0 auto;">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Application Settings</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="form-group">
+                            <label for="engine-select" id="label-engine">Translation Engine</label>
+                            <select id="engine-select">
+                                <option value="DeepL">DeepL API</option>
+                                <option value="GoogleTranslate">Google Cloud Translate</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="api-key-input" id="label-api-key">API Key (Securely stored)</label>
+                            <input type="password" id="api-key-input" placeholder="••••••••••••••••">
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 10px;">
+                            <button class="btn btn-primary" id="btn-save-key">Apply Changes</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="main.js" type="module"></script>
+</body>
+</html>

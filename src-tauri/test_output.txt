@@ -1,0 +1,32 @@
+   Compiling factoriomodtranslator v0.1.0 (C:\Users\taisu\.gemini\antigravity\project\factoriomodtranslator_app\src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.73s
+     Running unittests src\lib.rs (target\debug\deps\factoriomodtranslator_lib-e63dd8f6eb05e38b.exe)
+
+running 12 tests
+test services::cfg_parser::tests::test_parse_should_correctly_parse_cfg_content ... ok
+test services::cfg_parser::tests::test_write_should_preserve_structure ... ok
+test services::localization_service::tests::test_localization_should_return_correct_strings ... ok
+test services::localization_service::tests::test_get_all_translations_should_return_entire_map ... ok
+test services::glossary_service::tests::test_manage_glossary_alternative_duplicate_term_should_overwrite_existing ... ok
+test services::settings_service::tests::test_manage_settings_success_should_save_and_load_successfully ... ok
+test services::glossary_service::tests::test_manage_glossary_success_should_replace_terms ... ok
+test services::translation_history_service::tests::test_manage_history_success_should_add_and_get_history ... ok
+test services::vanilla_translation_service::tests::test_vanilla_data_matching_success_should_find_matches ... ok
+test services::orchestrator::tests::test_orchestrator_should_apply_glossary_before_api ... ok
+test services::translation_history_service::tests::test_manage_history_duplicate_should_not_create_duplicate_entries ... ok
+test services::orchestrator::tests::test_orchestrator_should_prefer_vanilla_match ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s
+
+     Running unittests src\main.rs (target\debug\deps\factoriomodtranslator-c78a7cba02ce6b69.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests factoriomodtranslator_lib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
