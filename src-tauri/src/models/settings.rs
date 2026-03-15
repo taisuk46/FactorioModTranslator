@@ -7,6 +7,8 @@ pub struct AppSettings {
     pub factorio_install_path: String,
     pub ui_language: String,
     pub last_mod_path: String,
+    pub default_source_lang: String,
+    pub default_target_lang: String,
     pub window_width: u32,
     pub window_height: u32,
     #[serde(default)]

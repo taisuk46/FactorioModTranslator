@@ -46,6 +46,8 @@ impl SettingsService {
             factorio_install_path: "C:\\Program Files\\Factorio".to_string(),
             ui_language: "ja".to_string(),
             last_mod_path: String::new(),
+            default_source_lang: "en".to_string(),
+            default_target_lang: "ja".to_string(),
             window_width: 1200,
             window_height: 800,
             api_keys: HashMap::new(),
@@ -163,6 +165,8 @@ mod tests {
         let dir = tempdir().unwrap();
         let service = SettingsService::new(dir.path());
         let mut new_settings = AppSettings::default();
+        new_settings.default_source_lang = "en".to_string();
+        new_settings.default_target_lang = "ja".to_string();
         new_settings.selected_engine = TranslationEngineType::GoogleTranslate;
         new_settings.factorio_install_path = "CustomPath".to_string();
 

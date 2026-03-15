@@ -52,6 +52,8 @@ async function init() {
           currentMod = await invoke('load_mod', { path });
           await info({ event: "mod_loaded_ui", title: currentMod.title, version: currentMod.version });
           showStatus(`Loaded: ${currentMod.title} (${currentMod.version})`);
+          
+          updateSourceLanguages();
           switchView('translation-preview');
           renderPreview();
         } catch (e) {
@@ -62,18 +64,36 @@ async function init() {
     });
   }
 
+  // Translation Progress Listener
+  await listen('translation-progress', (event) => {
+    const progress = event.payload;
+    const percentage = Math.round(progress * 100);
+    const fill = document.getElementById('progress-fill');
+    const text = document.getElementById('progress-text');
+    if (fill) fill.style.width = `${percentage}%`;
+    if (text) text.innerText = `${percentage}%`;
+  });
+
   // Translation
   const btnTranslate = document.getElementById('btn-translate');
   if (btnTranslate) {
     btnTranslate.addEventListener('click', async () => {
       if (!currentMod) return;
+      const progressIndicator = document.getElementById('progress-indicator');
+      const progressFill = document.getElementById('progress-fill');
+      const progressText = document.getElementById('progress-text');
+      
       try {
         showStatus("Translation started...");
+        if (progressIndicator) progressIndicator.style.display = 'flex';
+        if (progressFill) progressFill.style.width = '0%';
+        if (progressText) progressText.innerText = '0%';
+
         const results = await invoke('translate_mod', {
           modInfo: currentMod,
           mode: 'NewTranslation',
-          sourceLang: 'en',
-          targetLang: 'ja',
+          sourceLang: document.getElementById('src-lang-select').value,
+          targetLang: document.getElementById('target-lang-select').value,
           engineType: currentSettings.selected_engine
         });
         lastResults = results;
@@ -82,6 +102,11 @@ async function init() {
       } catch (e) {
         await error(`Translation failed: ${e}`);
         showError("Translation failed: " + e);
+      } finally {
+        // Keep it visible for a moment if 100%, then hide, or hide immediately on error if preferred
+        setTimeout(() => {
+          if (progressIndicator) progressIndicator.style.display = 'none';
+        }, 2000);
       }
     });
   }
@@ -99,7 +124,7 @@ async function init() {
         showStatus("Saving mod...");
         
         // Update lastResults with current input values from UI
-        const inputs = document.querySelectorAll('#translation-list .row-target input');
+        const inputs = document.querySelectorAll('#translation-list .row-target textarea');
         inputs.forEach((input, index) => {
           if (lastResults[index]) {
             lastResults[index].translated_text = input.value;
@@ -109,7 +134,7 @@ async function init() {
         await invoke('save_translation', {
           modInfo: currentMod,
           translations: lastResults,
-          targetLang: 'ja'
+          targetLang: document.getElementById('target-lang-select').value
         });
         
         await info({ event: "mod_saved_ui", mod: currentMod.name });
@@ -119,6 +144,42 @@ async function init() {
         showError("Save failed: " + e);
       }
     });
+  }
+
+  // Language selection change listeners
+  const srcLangSelect = document.getElementById('src-lang-select');
+  if (srcLangSelect) {
+    srcLangSelect.addEventListener('change', () => {
+      renderPreview();
+    });
+  }
+
+  const targetLangSelect = document.getElementById('target-lang-select');
+  if (targetLangSelect) {
+    targetLangSelect.addEventListener('change', () => {
+      // Potentially refresh some state, but focus is on source filtering
+    });
+  }
+}
+
+function updateSourceLanguages() {
+  const select = document.getElementById('src-lang-select');
+  if (!select || !currentMod) return;
+
+  const languages = [...new Set(currentMod.locale_files.map(f => f.language_code))];
+  select.innerHTML = '';
+  languages.forEach(lang => {
+    const opt = document.createElement('option');
+    opt.value = lang;
+    opt.innerText = lang === 'en' ? 'English (en)' : (lang === 'ja' ? 'Japanese (ja)' : lang);
+    select.appendChild(opt);
+  });
+
+  // Default logic: prefer 'en', else first
+  if (languages.includes('en')) {
+    select.value = 'en';
+  } else if (languages.length > 0) {
+    select.value = languages[0];
   }
 }
 
@@ -176,8 +237,17 @@ function renderPreview() {
   list.innerHTML = '';
   if (!currentMod) return;
 
+  const srcLang = document.getElementById('src-lang-select').value;
   lastResults = [];
-  currentMod.locale_files.forEach(file => {
+  
+  const filteredFiles = currentMod.locale_files.filter(f => f.language_code === srcLang);
+  
+  if (filteredFiles.length === 0) {
+    list.innerHTML = `<div class="status-msg">No locale files found for language: ${srcLang}</div>`;
+    return;
+  }
+
+  filteredFiles.forEach(file => {
     const fileHeader = document.createElement('h3');
     fileHeader.innerText = file.file_path;
     fileHeader.className = 'file-header';
@@ -212,8 +282,13 @@ function renderPreview() {
       row.innerHTML = `
         <td class="row-key">${entry.section} > ${entry.key}</td>
         <td class="row-source">${entry.value}</td>
-        <td class="row-target"><input type="text" class="form-group" style="margin:0; width:100%" value="${entry.value}"></td>
+        <td class="row-target"><textarea class="auto-height" style="margin:0; width:100%">${entry.value}</textarea></td>
       `;
+      const textarea = row.querySelector('textarea');
+      textarea.addEventListener('input', () => autoResize(textarea));
+      // Initial resize
+      setTimeout(() => autoResize(textarea), 0);
+      
       tbody.appendChild(row);
     });
     list.appendChild(table);
@@ -245,9 +320,14 @@ function renderResults(results) {
     row.innerHTML = `
       <td class="row-key">${res.section}.${res.key}</td>
       <td class="row-source">${res.source_text}</td>
-      <td class="row-target"><input type="text" class="form-group" style="margin:0; width:100%" value="${res.translated_text}"></td>
+      <td class="row-target"><textarea class="auto-height" style="margin:0; width:100%">${res.translated_text}</textarea></td>
       <td><span class="badge ${badgeClass}">${res.source}</span></td>
     `;
+    const textarea = row.querySelector('textarea');
+    textarea.addEventListener('input', () => autoResize(textarea));
+    // Initial resize
+    setTimeout(() => autoResize(textarea), 0);
+
     tbody.appendChild(row);
   });
   list.appendChild(table);
@@ -343,18 +423,39 @@ async function populateSettings() {
   if (engineSelect && currentSettings) {
     engineSelect.value = currentSettings.selected_engine;
   }
+  
+  const srcLangSelect = document.getElementById('src-lang-select');
+  const targetLangSelect = document.getElementById('target-lang-select');
+  
+  if (srcLangSelect && currentSettings.default_source_lang) {
+    srcLangSelect.value = currentSettings.default_source_lang;
+  } else if (srcLangSelect) {
+    srcLangSelect.value = 'en';
+  }
+  
+  if (targetLangSelect && currentSettings.default_target_lang) {
+    targetLangSelect.value = currentSettings.default_target_lang;
+  } else if (targetLangSelect) {
+    targetLangSelect.value = 'ja';
+  }
 }
 
 document.getElementById('btn-save-key').addEventListener('click', async () => {
   const engineSelect = document.getElementById('engine-select');
   const apiKeyInput = document.getElementById('api-key-input');
+  const srcLangSelect = document.getElementById('src-lang-select');
+  const targetLangSelect = document.getElementById('target-lang-select');
   
   const selectedEngine = engineSelect.value;
   const apiKey = apiKeyInput.value.trim();
+  const sourceLang = srcLangSelect.value;
+  const targetLang = targetLangSelect.value;
 
   try {
-    // 1. Save engine type in AppSettings
+    // 1. Save engine and languages in AppSettings
     currentSettings.selected_engine = selectedEngine;
+    currentSettings.default_source_lang = sourceLang;
+    currentSettings.default_target_lang = targetLang;
     await invoke('save_settings', { settings: currentSettings });
 
     // 2. Save API key securely if provided
@@ -370,5 +471,10 @@ document.getElementById('btn-save-key').addEventListener('click', async () => {
     showError("Failed to save settings: " + e);
   }
 });
+
+function autoResize(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = textarea.scrollHeight + 'px';
+}
 
 window.addEventListener('DOMContentLoaded', init);
