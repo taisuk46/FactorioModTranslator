@@ -9,4 +9,6 @@ pub struct AppSettings {
     pub last_mod_path: String,
     pub window_width: u32,
     pub window_height: u32,
+    #[serde(default)]
+    pub api_keys: std::collections::HashMap<String, String>,
 }
