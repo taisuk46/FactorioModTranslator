@@ -2,10 +2,11 @@ use std::fs;
 use std::io::Read;
 use std::path::Path;
 use serde::Deserialize;
+use serde_json::json;
 use crate::models::mod_info::ModInfo;
 use crate::models::enums::ModSourceType;
 use crate::services::cfg_parser::CfgParser;
-use log::info;
+use log::{info, error};
 
 #[derive(Debug, Deserialize)]
 struct InfoJson {
@@ -20,9 +21,10 @@ pub struct ModLoader;
 
 impl ModLoader {
     pub fn load_from_folder(path: &str) -> Result<ModInfo, String> {
-        info!("ModLoader: Loading from folder: {}", path);
+        info!("{}", json!({ "event": "load_from_folder_start", "path": path }));
         let root_path = Path::new(path);
         if !root_path.exists() || !root_path.is_dir() {
+            error!("{}", json!({ "event": "load_from_folder_error", "path": path, "reason": "Directory not found" }));
             return Err(format!("Directory not found: {}", path));
         }
 
@@ -78,9 +80,10 @@ impl ModLoader {
     }
 
     pub fn load_from_zip(zip_path: &str) -> Result<ModInfo, String> {
-        info!("ModLoader: Loading from zip: {}", zip_path);
+        info!("{}", json!({ "event": "load_from_zip_start", "path": zip_path }));
         let path = Path::new(zip_path);
         if !path.exists() {
+            error!("{}", json!({ "event": "load_from_zip_error", "path": zip_path, "reason": "Zip file not found" }));
             return Err(format!("Zip file not found: {}", zip_path));
         }
 
@@ -152,5 +155,57 @@ impl ModLoader {
             if let Some(a) = info.author { mod_info.author = a; }
             mod_info.factorio_version = info.factorio_version;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+    use std::fs::{self, File};
+    use std::io::Write;
+
+    #[test]
+    fn test_load_from_folder_success() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        
+        let info_content = r#"{
+            "name": "test-mod",
+            "version": "1.0.0",
+            "title": "Test Mod Title"
+        }"#;
+        fs::write(root.join("info.json"), info_content).unwrap();
+        
+        let locale_en = root.join("locale/en");
+        fs::create_dir_all(&locale_en).unwrap();
+        fs::write(locale_en.join("strings.cfg"), "[section]\nkey=value").unwrap();
+        
+        let result = ModLoader::load_from_folder(root.to_str().unwrap());
+        assert!(result.is_ok());
+        let mod_info = result.unwrap();
+        assert_eq!(mod_info.name, "test-mod");
+        assert_eq!(mod_info.title, "Test Mod Title");
+        assert_eq!(mod_info.locale_files.len(), 1);
+        assert_eq!(mod_info.locale_files[0].language_code, "en");
+        assert_eq!(mod_info.locale_files[0].entries[0].key, "key");
+    }
+
+    #[test]
+    fn test_load_from_folder_invalid_path() {
+        let result = ModLoader::load_from_folder("/invalid/path/that/does/not/exist");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_from_zip_empty() {
+        let dir = tempdir().unwrap();
+        let zip_path = dir.path().join("empty.zip");
+        let file = File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        zip.finish().unwrap();
+
+        let result = ModLoader::load_from_zip(zip_path.to_str().unwrap());
+        assert!(result.is_err());
     }
 }

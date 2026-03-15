@@ -3,7 +3,7 @@ pub mod services;
 pub mod commands;
 
 use tauri::Manager;
-use crate::commands::{AppState, load_mod, translate_mod, get_settings, save_settings, save_api_key, get_glossary, add_glossary_entry, remove_glossary_entry, get_history, load_vanilla_data, get_localized_strings, log_info, log_warn, log_error};
+use crate::commands::{AppState, load_mod, translate_mod, get_settings, save_settings, save_api_key, get_glossary, add_glossary_entry, remove_glossary_entry, get_history, load_vanilla_data, get_localized_strings, log_info, log_warn, log_error, save_translation};
 use crate::services::vanilla_translation_service::VanillaTranslationService;
 use crate::services::glossary_service::GlossaryService;
 use crate::services::translation_history_service::TranslationHistoryService;
@@ -27,18 +27,37 @@ pub fn run() {
                 }),
             ])
             .format(|out, message, record| {
-                let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S.%3f");
-                let level = record.level();
+                let timestamp = Local::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
+                let level = record.level().to_string();
                 let file = record.file().unwrap_or("unknown");
                 let line = record.line().unwrap_or(0);
-                let file_name = std::path::Path::new(file).file_name().and_then(|n| n.to_str()).unwrap_or(file);
+                let target = record.target();
                 
-                out.finish(format_args!(
-                    "[{}] [{}] [{}:{}] {}",
-                    timestamp, level, file_name, line, message
-                ))
+                let msg_str = format!("{}", message);
+                // Attempt to parse message as JSON to flatten it
+                let msg_json: serde_json::Value = serde_json::from_str(&msg_str).unwrap_or(serde_json::Value::String(msg_str));
+
+                let mut log_obj = serde_json::json!({
+                    "timestamp": timestamp,
+                    "level": level,
+                    "target": target,
+                    "file": file,
+                    "line": line,
+                });
+
+                if let serde_json::Value::Object(map) = msg_json {
+                    if let serde_json::Value::Object(ref mut log_map) = log_obj {
+                        for (k, v) in map {
+                            log_map.insert(k, v);
+                        }
+                    }
+                } else {
+                    log_obj["message"] = msg_json;
+                }
+
+                out.finish(format_args!("{}", log_obj))
             })
-            .level(log::LevelFilter::Info)
+            .level(log::LevelFilter::Debug)
             .build())
         .setup(|app| {
             info!("Backend services initializing...");
@@ -68,7 +87,8 @@ pub fn run() {
             get_localized_strings,
             log_info,
             log_warn,
-            log_error
+            log_error,
+            save_translation
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

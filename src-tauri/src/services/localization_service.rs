@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use log::{info, warn};
+use serde_json::json;
 
 pub struct LocalizationService {
     translations: HashMap<String, HashMap<String, String>>,
@@ -50,16 +52,35 @@ impl LocalizationService {
     }
 
     pub fn get_string(&self, key: &str, lang: &str) -> String {
-        let lang_code = if lang.starts_with("ja") { "ja" } else { "en" };
+        let lang_code = if lang.starts_with("ja") { 
+            "ja" 
+        } else if lang.starts_with("en") {
+            "en"
+        } else {
+            warn!("{}", json!({ "event": "localization_fallback", "requested_lang": lang, "fallback": "en" }));
+            "en"
+        };
         
         self.translations.get(lang_code)
             .and_then(|m| m.get(key))
             .cloned()
-            .unwrap_or_else(|| key.to_string())
+            .unwrap_or_else(|| {
+                warn!("{}", json!({ "event": "localization_missing_key", "key": key, "lang": lang_code }));
+                key.to_string()
+            })
     }
 
     pub fn get_all_translations(&self, lang: &str) -> HashMap<String, String> {
-        let lang_code = if lang.starts_with("ja") { "ja" } else { "en" };
+        let lang_code = if lang.starts_with("ja") { 
+            "ja" 
+        } else if lang.starts_with("en") {
+            "en"
+        } else {
+            warn!("{}", json!({ "event": "localization_all_fallback", "requested_lang": lang, "fallback": "en" }));
+            "en"
+        };
+        
+        info!("{}", json!({ "event": "localization_loaded", "lang": lang_code }));
         self.translations.get(lang_code).cloned().unwrap_or_default()
     }
 }
@@ -83,5 +104,14 @@ mod tests {
         let ja = service.get_all_translations("ja");
         assert!(ja.contains_key("AppTitle"));
         assert_eq!(ja.get("AppTitle").unwrap(), "Factorio Mod 自動翻訳ツール");
+    }
+
+    #[test]
+    fn test_localization_fallback_to_english() {
+        let service = LocalizationService::new();
+        let fallback = service.get_all_translations("fr");
+        assert!(fallback.contains_key("AppTitle"));
+        assert_eq!(fallback.get("AppTitle").unwrap(), "Factorio Mod Auto-Translator");
+        assert_eq!(service.get_string("AppTitle", "de"), "Factorio Mod Auto-Translator");
     }
 }

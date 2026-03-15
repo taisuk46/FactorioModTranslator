@@ -2,6 +2,8 @@ use std::path::{Path, PathBuf};
 use rusqlite::{params, Connection};
 use chrono::{DateTime, Utc};
 use crate::models::translation::TranslationRecord;
+use log::{info, error};
+use serde_json::json;
 
 pub struct TranslationHistoryService {
     db_path: PathBuf,
@@ -19,7 +21,10 @@ impl TranslationHistoryService {
     }
 
     fn initialize_database(&self) -> Result<(), String> {
-        let conn = Connection::open(&self.db_path).map_err(|e| e.to_string())?;
+        let conn = Connection::open(&self.db_path).map_err(|e| {
+            error!("{}", json!({ "event": "history_db_open_error", "error": e.to_string(), "path": self.db_path.display().to_string() }));
+            e.to_string()
+        })?;
         conn.execute(
             "CREATE TABLE IF NOT EXISTS translation_history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -40,7 +45,10 @@ impl TranslationHistoryService {
     }
 
     pub fn save_record(&self, record: &TranslationRecord) -> Result<(), String> {
-        let conn = Connection::open(&self.db_path).map_err(|e| e.to_string())?;
+        let conn = Connection::open(&self.db_path).map_err(|e| {
+            error!("{}", json!({ "event": "history_db_open_error", "error": e.to_string() }));
+            e.to_string()
+        })?;
         conn.execute(
             "INSERT OR REPLACE INTO translation_history 
             (mod_name, section, key, source_lang, target_lang, source_text, translated_text, engine, translated_at)
@@ -56,7 +64,11 @@ impl TranslationHistoryService {
                 record.engine,
                 record.translated_at.to_rfc3339(),
             ],
-        ).map_err(|e| e.to_string())?;
+        ).map_err(|e| {
+            error!("{}", json!({ "event": "history_save_error", "mod": record.mod_name, "key": record.key, "error": e.to_string() }));
+            e.to_string()
+        })?;
+        info!("{}", json!({ "event": "history_record_saved", "mod": record.mod_name, "key": record.key, "engine": record.engine }));
         Ok(())
     }
 
@@ -71,7 +83,10 @@ impl TranslationHistoryService {
     }
 
     pub fn get_all_history(&self) -> Result<Vec<TranslationRecord>, String> {
-        let conn = Connection::open(&self.db_path).map_err(|e| e.to_string())?;
+        let conn = Connection::open(&self.db_path).map_err(|e| {
+            error!("{}", json!({ "event": "history_db_open_error", "error": e.to_string() }));
+            e.to_string()
+        })?;
         let mut stmt = conn.prepare(
             "SELECT id, mod_name, section, key, source_lang, target_lang, source_text, translated_text, engine, translated_at 
              FROM translation_history ORDER BY translated_at DESC;"
@@ -100,8 +115,12 @@ impl TranslationHistoryService {
 
         let mut results = Vec::new();
         for row in rows {
-            results.push(row.map_err(|e| e.to_string())?);
+            match row {
+                Ok(r) => results.push(r),
+                Err(e) => error!("{}", json!({ "event": "history_row_parse_error", "error": e.to_string() })),
+            }
         }
+        info!("{}", json!({ "event": "history_loaded", "count": results.len() }));
         Ok(results)
     }
 }

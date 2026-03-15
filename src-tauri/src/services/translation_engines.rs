@@ -2,6 +2,9 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use reqwest::Client;
 use crate::services::formatter::FactorioStringFormatter;
+use crate::services::logging::mask_sensitive;
+use log::{info, error};
+use serde_json::json;
 
 #[async_trait]
 pub trait TranslationEngine: Send + Sync {
@@ -17,9 +20,13 @@ pub struct DeepLTranslationEngine {
 
 impl DeepLTranslationEngine {
     pub fn new(api_key: String) -> Self {
+        let client = Client::builder()
+            .user_agent("FactorioModTranslator/0.1.0")
+            .build()
+            .unwrap_or_else(|_| Client::new());
         Self {
             api_key,
-            client: Client::new(),
+            client,
         }
     }
 
@@ -49,14 +56,24 @@ impl TranslationEngine for DeepLTranslationEngine {
 
     async fn translate(&self, text: &str, source_lang: &str, target_lang: &str) -> Result<String, String> {
         let wrapped_text = FactorioStringFormatter::wrap_tags(text);
-        let url = if self.api_key.ends_with(":fx") {
+        let trimmed_key = self.api_key.trim();
+        let url = if trimmed_key.ends_with(":fx") {
             "https://api-free.deepl.com/v2/translate"
         } else {
             "https://api.deepl.com/v2/translate"
         };
 
+        info!("{}", json!({
+            "event": "api_request",
+            "engine": "DeepL",
+            "url": url,
+            "source": source_lang,
+            "target": target_lang,
+            "text_len": text.len(),
+            "api_key_masked": mask_sensitive(&self.api_key),
+        }));
+
         let params = [
-            ("auth_key", &self.api_key),
             ("text", &wrapped_text),
             ("source_lang", &Self::map_lang(source_lang, false)),
             ("target_lang", &Self::map_lang(target_lang, true)),
@@ -65,16 +82,26 @@ impl TranslationEngine for DeepLTranslationEngine {
         ];
 
         let res = self.client.post(url)
+            .header("Authorization", format!("DeepL-Auth-Key {}", trimmed_key))
             .form(&params)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| {
+                error!("{}", json!({ "event": "api_network_error", "engine": "DeepL", "error": e.to_string() }));
+                e.to_string()
+            })?;
 
-        if !res.status().is_success() {
-            return Err(format!("DeepL API error: {}", res.status()));
+        let status = res.status();
+        if !status.is_success() {
+            error!("{}", json!({ "event": "api_error_status", "engine": "DeepL", "status": status.as_u16() }));
+            return Err(format!("DeepL API error: {}", status));
         }
 
-        let json: DeepLResponse = res.json().await.map_err(|e| e.to_string())?;
+        let json: DeepLResponse = res.json().await.map_err(|e| {
+            error!("{}", json!({ "event": "api_parse_error", "engine": "DeepL", "error": e.to_string() }));
+            e.to_string()
+        })?;
+        
         let translated = json.translations.first().ok_or("No translations returned")?.text.clone();
         
         Ok(FactorioStringFormatter::unwrap_tags(&translated))
@@ -127,6 +154,15 @@ impl TranslationEngine for GoogleTranslationEngine {
     async fn translate(&self, text: &str, source_lang: &str, target_lang: &str) -> Result<String, String> {
         let url = "https://translation.googleapis.com/language/translate/v2";
         
+        info!("{}", json!({
+            "event": "api_request",
+            "engine": "Google",
+            "source": source_lang,
+            "target": target_lang,
+            "text_len": text.len(),
+            "api_key_masked": mask_sensitive(&self.api_key),
+        }));
+
         let params = [
             ("key", &self.api_key),
             ("q", &text.to_string()),
@@ -139,13 +175,21 @@ impl TranslationEngine for GoogleTranslationEngine {
             .query(&params)
             .send()
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|e| {
+                error!("{}", json!({ "event": "api_network_error", "engine": "Google", "error": e.to_string() }));
+                e.to_string()
+            })?;
 
-        if !res.status().is_success() {
-            return Err(format!("Google API error: {}", res.status()));
+        let status = res.status();
+        if !status.is_success() {
+            error!("{}", json!({ "event": "api_error_status", "engine": "Google", "status": status.as_u16() }));
+            return Err(format!("Google API error: {}", status));
         }
 
-        let json: GoogleResponse = res.json().await.map_err(|e| e.to_string())?;
+        let json: GoogleResponse = res.json().await.map_err(|e| {
+            error!("{}", json!({ "event": "api_parse_error", "engine": "Google", "error": e.to_string() }));
+            e.to_string()
+        })?;
         Ok(json.data.translations.first().ok_or("No translations returned")?.translated_text.clone())
     }
 
@@ -155,5 +199,29 @@ impl TranslationEngine for GoogleTranslationEngine {
             results.push(self.translate(&text, source_lang, target_lang).await?);
         }
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_deepl_endpoint_selection() {
+        // Free API Key
+        let free_engine = DeepLTranslationEngine::new("test-key:fx".to_string());
+        let free_key = free_engine.api_key.trim();
+        assert!(free_key.ends_with(":fx"));
+        
+        // Pro API Key
+        let pro_engine = DeepLTranslationEngine::new("test-key-pro".to_string());
+        let pro_key = pro_engine.api_key.trim();
+        assert!(!pro_key.ends_with(":fx"));
+
+        // Key with whitespace
+        let ws_engine = DeepLTranslationEngine::new("  test-key:fx  \n".to_string());
+        let ws_key = ws_engine.api_key.trim();
+        assert!(ws_key.ends_with(":fx"));
+        assert_eq!(ws_key, "test-key:fx");
     }
 }

@@ -4,6 +4,7 @@ pub mod settings_service;
 pub mod glossary_service;
 pub mod translation_history_service;
 pub mod vanilla_translation_service;
+pub mod logging;
 pub mod formatter;
 pub mod translation_engines;
 pub mod orchestrator;

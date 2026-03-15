@@ -1,9 +1,13 @@
 const { invoke } = window.__TAURI__.core;
 const { listen } = window.__TAURI__.event;
 
-const info = (message) => invoke('log_info', { message });
-const warn = (message) => invoke('log_warn', { message });
-const error = (message) => invoke('log_error', { message });
+const log = (level, message) => {
+  const payload = typeof message === 'string' ? message : JSON.stringify(message);
+  invoke(`log_${level}`, { message: payload });
+};
+const info = (message) => log('info', message);
+const warn = (message) => log('warn', message);
+const error = (message) => log('error', message);
 
 let currentMod = null;
 let currentSettings = null;
@@ -45,6 +49,7 @@ async function init() {
       if (path) {
         try {
           currentMod = await invoke('load_mod', { path });
+          await info({ event: "mod_loaded_ui", title: currentMod.title, version: currentMod.version });
           showStatus(`Loaded: ${currentMod.title} (${currentMod.version})`);
           switchView('translation-preview');
           renderPreview();

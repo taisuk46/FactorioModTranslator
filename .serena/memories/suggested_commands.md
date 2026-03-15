@@ -2,8 +2,9 @@
 
 | Task | Command |
 | --- | --- |
-| Build Solution | `dotnet build` |
-| Run Tests | `dotnet test` |
-| Clean Project | `dotnet clean` |
-| Debug Publish | `dotnet publish src/FactorioModTranslator/FactorioModTranslator.csproj -c Debug -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish_debug` |
-| Release Publish | `dotnet publish src/FactorioModTranslator/FactorioModTranslator.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishReadyToRun=false -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish` |
+| Dev Build (with hot-reload) | `npm run tauri dev` |
+| Release Build + Installer | `npm run tauri build` |
+| Rust Build Only | `cd src-tauri && cargo build` |
+| Rust Check (fast) | `cd src-tauri && cargo check` |
+| Rust Test | `cd src-tauri && cargo test` |
+| Install npm dependencies | `npm install` |
