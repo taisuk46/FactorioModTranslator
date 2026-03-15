@@ -12,6 +12,7 @@ const error = (message) => log('error', message);
 let currentMod = null;
 let currentSettings = null;
 let localizedStrings = {};
+let lastResults = [];
 
 async function init() {
   await info("Application frontend initializing...");
@@ -75,11 +76,47 @@ async function init() {
           targetLang: 'ja',
           engineType: currentSettings.selected_engine
         });
+        lastResults = results;
         renderResults(results);
         showStatus("Translation completed!");
       } catch (e) {
         await error(`Translation failed: ${e}`);
         showError("Translation failed: " + e);
+      }
+    });
+  }
+
+  // Save Mod
+  const btnSaveMod = document.getElementById('btn-save-mod');
+  if (btnSaveMod) {
+    btnSaveMod.addEventListener('click', async () => {
+      if (!currentMod || lastResults.length === 0) {
+        showError("No translation to save.");
+        return;
+      }
+
+      try {
+        showStatus("Saving mod...");
+        
+        // Update lastResults with current input values from UI
+        const inputs = document.querySelectorAll('#translation-list .row-target input');
+        inputs.forEach((input, index) => {
+          if (lastResults[index]) {
+            lastResults[index].translated_text = input.value;
+          }
+        });
+
+        await invoke('save_translation', {
+          modInfo: currentMod,
+          translations: lastResults,
+          targetLang: 'ja'
+        });
+        
+        await info({ event: "mod_saved_ui", mod: currentMod.name });
+        showStatus("Mod saved successfully!");
+      } catch (e) {
+        await error(`Save failed: ${e}`);
+        showError("Save failed: " + e);
       }
     });
   }
@@ -139,6 +176,7 @@ function renderPreview() {
   list.innerHTML = '';
   if (!currentMod) return;
 
+  lastResults = [];
   currentMod.locale_files.forEach(file => {
     const fileHeader = document.createElement('h3');
     fileHeader.innerText = file.file_path;
@@ -160,11 +198,21 @@ function renderPreview() {
     const tbody = table.querySelector('tbody');
 
     file.entries.forEach(entry => {
+      // Add to lastResults so it can be saved even if not auto-translated
+      lastResults.push({
+        section: entry.section,
+        key: entry.key,
+        source_text: entry.value,
+        translated_text: entry.value, // Default to original for manual edit
+        source: 'Manual',
+        is_edited: false
+      });
+
       const row = document.createElement('tr');
       row.innerHTML = `
         <td class="row-key">${entry.section} > ${entry.key}</td>
         <td class="row-source">${entry.value}</td>
-        <td class="row-target"><input type="text" class="form-group" style="margin:0; width:100%" placeholder="..."></td>
+        <td class="row-target"><input type="text" class="form-group" style="margin:0; width:100%" value="${entry.value}"></td>
       `;
       tbody.appendChild(row);
     });

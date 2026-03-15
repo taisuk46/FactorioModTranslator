@@ -16,7 +16,7 @@ use crate::services::orchestrator::TranslationOrchestrator;
 use crate::services::translation_engines::{DeepLTranslationEngine, GoogleTranslationEngine, TranslationEngine};
 use crate::services::localization_service::LocalizationService;
 use crate::services::logging::{LogContext, mask_sensitive};
-use log::info;
+use log::{info, error};
 use serde_json::json;
 
 pub struct AppState {
@@ -149,21 +149,39 @@ pub async fn save_translation(
     let ctx = LogContext::new("save_translation");
     info!("{}", json!({ "request_id": ctx.request_id, "mod": mod_info.name, "target_lang": target_lang }));
 
+    if mod_info.source_type == crate::models::enums::ModSourceType::Zip {
+        let err = "Saving translations directly to ZIP files is not supported yet. Please extract the mod to a folder first.";
+        error!("{}", json!({ "request_id": ctx.request_id, "error": err }));
+        return Err(err.to_string());
+    }
+
     let mut success_count = 0;
+    let mut total_files = 0;
 
     for mut locale_file in mod_info.locale_files {
+        total_files += 1;
         // We only overwrite entries if we have a translation for them.
+        let mut entries_updated = 0;
         for entry in &mut locale_file.entries {
             if let Some(t) = translations.iter().find(|t| t.section == entry.section && t.key == entry.key) {
                 entry.value = t.translated_text.clone();
+                entries_updated += 1;
             }
         }
         
-        let path = std::path::Path::new(&mod_info.source_path).join("locale").join(&target_lang).join(std::path::Path::new(&locale_file.file_path).file_name().unwrap());
+        if entries_updated == 0 {
+            info!("{}", json!({ "request_id": ctx.request_id, "event": "skip_file", "path": locale_file.file_path, "reason": "no_entries_to_update" }));
+            continue;
+        }
+
+        let file_name = std::path::Path::new(&locale_file.file_path).file_name().ok_or_else(|| "Invalid file path".to_string())?;
+        let path = std::path::Path::new(&mod_info.source_path).join("locale").join(&target_lang).join(file_name);
         
+        info!("{}", json!({ "request_id": ctx.request_id, "event": "saving_file", "path": path.display().to_string(), "entries_updated": entries_updated }));
+
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create dir: {}", e))?;
+                std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create dir {}: {}", parent.display(), e))?;
             }
         }
 
@@ -171,6 +189,10 @@ pub async fn save_translation(
         crate::services::cfg_parser::CfgParser::write(&locale_file, file).map_err(|e| format!("Failed to write cfg file {}: {}", path.display(), e))?;
         info!("{}", json!({ "request_id": ctx.request_id, "event": "file_saved", "path": path.display().to_string() }));
         success_count += 1;
+    }
+
+    if success_count == 0 && total_files > 0 {
+        return Err("No translations were found to save in any of the locale files.".to_string());
     }
 
     info!("{}", json!({ "request_id": ctx.request_id, "event": "save_translation_completed", "saved_files": success_count }));
