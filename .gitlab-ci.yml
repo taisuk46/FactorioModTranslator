@@ -1,44 +1,39 @@
-workflow:
-  rules:
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
-      when: never
-    - when: always
-
-include:
-  # include the component located in the current project from the current SHA
-  - component: $CI_SERVER_FQDN/$CI_PROJECT_PATH/my-component@$CI_COMMIT_SHA
-    inputs:
-      job_name: "component job of my-component"
-      stage: build
-
 stages:
   - build
-  - test
-  - release
+  - deploy
 
-ensure-job-added:
-  stage: test
-  image: badouralix/curl-jq
+# Windowsビルドジョブ
+build_windows:
+  stage: build
+  tags:
+    - windows  # Windows Runnerが必要です
+  script:
+    - npm install
+    - npm run tauri build -- --bundles nsis
+  artifacts:
+    name: "FactorioModTranslator-win64"
+    paths:
+      - src-tauri/target/release/bundle/nsis/*.exe
+    expire_in: 1 week
   rules:
-    # project must be public for `curl` to access the API; using `CI_JOB_TOKEN` is insufficient!
-    - if: $CI_PROJECT_VISIBILITY != "public"
-      when: never
-    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
-      when: never
-    - when: always
-  script: |
-    url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines/${CI_PIPELINE_ID}/jobs"
-    curl --fail --show-error --silent "$url" |
-    jq --exit-status 'map(select(.name | contains("component job of my-component"))) | length >= 1'
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
 
-create-release:
-  stage: release
+# リリース作成ジョブ（タグがプッシュされた時のみ実行）
+release_job:
+  stage: deploy
   image: registry.gitlab.com/gitlab-org/release-cli:latest
   rules:
     - if: $CI_COMMIT_TAG
-  script: echo "Creating release $CI_COMMIT_TAG"
+  script:
+    - echo "Creating release for $CI_COMMIT_TAG"
   release:
-    tag_name: $CI_COMMIT_TAG
-    description: "Release $CI_COMMIT_TAG of components repository $CI_PROJECT_PATH"
+    name: "Release $CI_COMMIT_TAG"
+    description: "Automated release from GitLab CI/CD"
+    tag_name: "$CI_COMMIT_TAG"
+    assets:
+      links:
+        - name: "Windows Installer (.exe)"
+          # アーティファクトへの直接リンク（ジョブ名が必要）
+          url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/src-tauri/target/release/bundle/nsis/FactorioModTranslator_${CI_COMMIT_TAG}_x64-setup.exe?job=build_windows"
+
