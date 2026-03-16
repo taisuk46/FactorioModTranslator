@@ -6,7 +6,11 @@ stages:
 build_windows:
   stage: build
   tags:
-    - windows  # Windows Runnerが必要です
+    - saas-windows-medium-amd64  # GitLab SaaSの共有Windows Runner
+  before_script:
+    - If (!(Get-Command "node" -ErrorAction SilentlyContinue)) { choco install nodejs -y }
+    - If (!(Get-Command "rustc" -ErrorAction SilentlyContinue)) { choco install rustp -y; $env:Path += ";$env:USERPROFILE\.cargo\bin" }
+    - If (!(Get-Command "npm" -ErrorAction SilentlyContinue)) { choco install npm -y }
   script:
     - npm install
     - npm run tauri build -- --bundles nsis
@@ -20,6 +24,7 @@ build_windows:
     - if: $CI_COMMIT_TAG
 
 # リリース作成ジョブ（タグがプッシュされた時のみ実行）
+# このジョブは標準のLinux Shared Runnerで実行されます
 release_job:
   stage: deploy
   image: registry.gitlab.com/gitlab-org/release-cli:latest
@@ -34,6 +39,6 @@ release_job:
     assets:
       links:
         - name: "Windows Installer (.exe)"
-          # アーティファクトへの直接リンク（ジョブ名が必要）
           url: "${CI_PROJECT_URL}/-/jobs/artifacts/${CI_COMMIT_TAG}/raw/src-tauri/target/release/bundle/nsis/FactorioModTranslator_${CI_COMMIT_TAG}_x64-setup.exe?job=build_windows"
+
 
