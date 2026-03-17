@@ -20,7 +20,7 @@
         <nav id="tabs">
             <div class="tab active" data-view="mod-selection" id="tab-mod-selection">Mod Selection</div>
             <div class="tab" data-view="translation-preview" id="tab-translation-preview">Preview</div>
-            <div class="tab" data-view="glossary" id="tab-glossary">Glossary</div>
+            <div class="tab" data-view="glossary" id="tab-glossary" style="display: none;">Glossary</div>
             <div class="tab" data-view="history" id="tab-history">History</div>
             <div class="tab" data-view="settings" id="tab-settings">Settings</div>
         </nav>
@@ -65,7 +65,7 @@
                 <div id="translation-list" class="data-container"></div>
             </section>
 
-            <section id="glossary" class="view">
+            <section id="glossary" class="view" style="display: none;">
                 <div class="panel">
                     <div class="panel-header">
                         <h2 class="panel-title">Term Glossary</h2>
@@ -94,7 +94,7 @@
                             <label for="engine-select" id="label-engine">Translation Engine</label>
                             <select id="engine-select">
                                 <option value="DeepL">DeepL API</option>
-                                <option value="GoogleTranslate">Google Cloud Translate</option>
+                                <!-- <option value="GoogleTranslate" style="display: none;">Google Cloud Translate</option> -->
                             </select>
                         </div>
                         <div class="form-group">
