@@ -3,7 +3,7 @@ use serde::Deserialize;
 use reqwest::Client;
 use crate::services::formatter::FactorioStringFormatter;
 use crate::services::logging::mask_sensitive;
-use log::{info, error};
+use log::{info, error, warn};
 use serde_json::json;
 
 #[async_trait]
@@ -34,6 +34,12 @@ impl DeepLTranslationEngine {
         let lang = lang.to_uppercase();
         if lang == "EN" {
             if is_target { "EN-US".to_string() } else { "EN".to_string() }
+        } else if lang == "ZH-CN" {
+            "ZH".to_string()
+        } else if lang == "PT-BR" || lang == "PT-PT" {
+            if is_target { lang } else { "PT".to_string() }
+        } else if lang.starts_with("ES-") {
+            "ES".to_string()
         } else {
             lang
         }
@@ -63,16 +69,6 @@ impl TranslationEngine for DeepLTranslationEngine {
             "https://api.deepl.com/v2/translate"
         };
 
-        info!("{}", json!({
-            "event": "api_request",
-            "engine": "DeepL",
-            "url": url,
-            "source": source_lang,
-            "target": target_lang,
-            "text_len": text.len(),
-            "api_key_masked": mask_sensitive(&self.api_key),
-        }));
-
         let params = [
             ("text", &wrapped_text),
             ("source_lang", &Self::map_lang(source_lang, false)),
@@ -81,30 +77,71 @@ impl TranslationEngine for DeepLTranslationEngine {
             ("ignore_tags", &"keep".to_string()),
         ];
 
-        let res = self.client.post(url)
-            .header("Authorization", format!("DeepL-Auth-Key {}", trimmed_key))
-            .form(&params)
-            .send()
-            .await
-            .map_err(|e| {
-                error!("{}", json!({ "event": "api_network_error", "engine": "DeepL", "error": e.to_string() }));
-                e.to_string()
-            })?;
+        let mut retry_count = 0;
+        let max_retries = 5;
+        let mut delay = std::time::Duration::from_millis(1000);
 
-        let status = res.status();
-        if !status.is_success() {
-            error!("{}", json!({ "event": "api_error_status", "engine": "DeepL", "status": status.as_u16() }));
-            return Err(format!("DeepL API error: {}", status));
+        loop {
+            info!("{}", json!({
+                "event": "api_request",
+                "engine": "DeepL",
+                "attempt": retry_count + 1,
+                "url": url,
+                "source": source_lang,
+                "target": target_lang,
+                "text_len": text.len(),
+                "api_key_masked": mask_sensitive(&self.api_key),
+            }));
+
+            let res_result = self.client.post(url)
+                .header("Authorization", format!("DeepL-Auth-Key {}", trimmed_key))
+                .form(&params)
+                .send()
+                .await;
+
+            match res_result {
+                Ok(res) => {
+                    let status = res.status();
+                    if status.is_success() {
+                        let json: DeepLResponse = res.json().await.map_err(|e| {
+                            error!("{}", json!({ "event": "api_parse_error", "engine": "DeepL", "error": e.to_string() }));
+                            e.to_string()
+                        })?;
+                        
+                        let translated = json.translations.first().ok_or("No translations returned")?.text.clone();
+                        return Ok(FactorioStringFormatter::unwrap_tags(&translated));
+                    } else if (status.as_u16() == 429 || status.is_server_error()) && retry_count < max_retries {
+                        warn!("{}", json!({
+                            "event": "api_retryable_error",
+                            "engine": "DeepL",
+                            "status": status.as_u16(),
+                            "retry_count": retry_count + 1,
+                            "next_delay_ms": delay.as_millis()
+                        }));
+                    } else {
+                        error!("{}", json!({ "event": "api_error_status", "engine": "DeepL", "status": status.as_u16() }));
+                        return Err(format!("DeepL API error: {}", status));
+                    }
+                }
+                Err(e) if retry_count < max_retries => {
+                    warn!("{}", json!({
+                        "event": "api_network_retry",
+                        "engine": "DeepL",
+                        "error": e.to_string(),
+                        "retry_count": retry_count + 1,
+                        "next_delay_ms": delay.as_millis()
+                    }));
+                }
+                Err(e) => {
+                    error!("{}", json!({ "event": "api_network_error", "engine": "DeepL", "error": e.to_string() }));
+                    return Err(e.to_string());
+                }
+            }
+
+            tokio::time::sleep(delay).await;
+            retry_count += 1;
+            delay *= 2;
         }
-
-        let json: DeepLResponse = res.json().await.map_err(|e| {
-            error!("{}", json!({ "event": "api_parse_error", "engine": "DeepL", "error": e.to_string() }));
-            e.to_string()
-        })?;
-        
-        let translated = json.translations.first().ok_or("No translations returned")?.text.clone();
-        
-        Ok(FactorioStringFormatter::unwrap_tags(&translated))
     }
 
     async fn translate_batch(&self, texts: Vec<String>, source_lang: &str, target_lang: &str) -> Result<Vec<String>, String> {

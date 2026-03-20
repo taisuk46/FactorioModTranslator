@@ -13,7 +13,9 @@
     "BtnSaveMod": "Modを保存",
     "LabelEngine": "翻訳エンジン",
     "LabelApiKey": "APIキー",
-    "BtnSaveKey": "キーを保存"
+    "BtnSaveKey": "キーを保存",
+    "ApiConfigured": "設定済み",
+    "ApiNotConfigured": "未設定"
   },
   "en": {
     "AppTitle": "Factorio Mod Auto-Translator",
@@ -29,6 +31,8 @@
     "BtnSaveMod": "Save Mod",
     "LabelEngine": "Translation Engine",
     "LabelApiKey": "API Key",
-    "BtnSaveKey": "Save Key"
+    "BtnSaveKey": "Save Key",
+    "ApiConfigured": "Configured",
+    "ApiNotConfigured": "Not Set"
   }
 }

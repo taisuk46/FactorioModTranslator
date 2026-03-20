@@ -27,6 +27,15 @@ pub struct AppState {
 }
 
 #[tauri::command]
+pub async fn select_mod_path() -> Result<Option<String>, String> {
+    let res = rfd::FileDialog::new()
+        .set_title("Select Factorio Mod Folder")
+        .pick_folder();
+    
+    Ok(res.map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
 pub async fn get_localized_strings(state: State<'_, AppState>, lang: String) -> Result<std::collections::HashMap<String, String>, String> {
     Ok(state.localization_service.get_all_translations(&lang))
 }
@@ -111,10 +120,10 @@ pub async fn translate_mod(
 }
 
 #[tauri::command]
-pub async fn get_settings(app: AppHandle) -> AppSettings {
+pub async fn get_settings(app: AppHandle) -> Result<AppSettings, String> {
     info!("Command: get_settings");
     let app_data = app.path().app_local_data_dir().unwrap_or(PathBuf::from("."));
-    SettingsService::new(&app_data).load_settings()
+    Ok(SettingsService::new(&app_data).load_settings())
 }
 
 #[tauri::command]

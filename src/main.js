@@ -46,7 +46,7 @@ async function init() {
   const btnBrowse = document.getElementById('btn-browse');
   if (btnBrowse) {
     btnBrowse.addEventListener('click', async () => {
-      const path = prompt(localizedStrings.PromptEnterModPath || "Enter Mod Folder or Zip path:");
+      const path = await invoke('select_mod_path');
       if (path) {
         try {
           currentMod = await invoke('load_mod', { path });
@@ -160,6 +160,13 @@ async function init() {
       // Potentially refresh some state, but focus is on source filtering
     });
   }
+
+  const engineSelect = document.getElementById('engine-select');
+  if (engineSelect) {
+    engineSelect.addEventListener('change', () => {
+      updateApiKeyStatus();
+    });
+  }
 }
 
 function updateSourceLanguages() {
@@ -204,6 +211,7 @@ async function applyLocalization(lang) {
     if (btnBrowse) btnBrowse.innerText = localizedStrings.SelectMod;
 
     // ... more labels ...
+    updateApiKeyStatus();
   } catch (e) {
     await error(`Localization failed: ${e}`);
   }
@@ -438,6 +446,25 @@ async function populateSettings() {
   } else if (targetLangSelect) {
     targetLangSelect.value = 'ja';
   }
+  
+  updateApiKeyStatus();
+}
+
+function updateApiKeyStatus() {
+  const statusEl = document.getElementById('api-key-status');
+  const engineSelect = document.getElementById('engine-select');
+  if (!statusEl || !engineSelect || !currentSettings) return;
+
+  const engine = engineSelect.value === 'DeepL' ? 'DeepL' : 'Google';
+  const hasKey = currentSettings.api_keys && currentSettings.api_keys[engine];
+
+  if (hasKey) {
+    statusEl.innerText = localizedStrings.ApiConfigured || "Configured";
+    statusEl.className = 'status-badge status-configured';
+  } else {
+    statusEl.innerText = localizedStrings.ApiNotConfigured || "Not Set";
+    statusEl.className = 'status-badge status-not-configured';
+  }
 }
 
 document.getElementById('btn-save-key').addEventListener('click', async () => {
@@ -462,7 +489,13 @@ document.getElementById('btn-save-key').addEventListener('click', async () => {
     if (apiKey) {
       const engineName = selectedEngine === 'DeepL' ? 'DeepL' : 'Google';
       await invoke('save_api_key', { engine: engineName, key: apiKey });
+      
+      // Update local settings object so UI reflects it immediately
+      if (!currentSettings.api_keys) currentSettings.api_keys = {};
+      currentSettings.api_keys[engineName] = "dummy"; // Just to show it exists
+      
       apiKeyInput.value = ''; // Clear for security
+      updateApiKeyStatus();
     }
 
     showStatus("Settings saved successfully!");

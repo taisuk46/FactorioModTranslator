@@ -3,7 +3,7 @@ pub mod services;
 pub mod commands;
 
 use tauri::Manager;
-use crate::commands::{AppState, load_mod, translate_mod, get_settings, save_settings, save_api_key, get_glossary, add_glossary_entry, remove_glossary_entry, get_history, load_vanilla_data, get_localized_strings, log_info, log_warn, log_error, save_translation};
+use crate::commands::{AppState, load_mod, translate_mod, get_settings, save_settings, save_api_key, get_glossary, add_glossary_entry, remove_glossary_entry, get_history, load_vanilla_data, get_localized_strings, log_info, log_warn, log_error, save_translation, select_mod_path};
 use crate::services::vanilla_translation_service::VanillaTranslationService;
 use crate::services::glossary_service::GlossaryService;
 use crate::services::translation_history_service::TranslationHistoryService;
@@ -21,10 +21,7 @@ pub fn run() {
         .plugin(tauri_plugin_log::Builder::new()
             .targets([
                 Target::new(TargetKind::Stdout),
-                Target::new(TargetKind::Folder {
-                    path: std::path::PathBuf::from(std::env::var("LOCALAPPDATA").unwrap_or_else(|_| ".".to_string())).join("FactorioModTranslator").join("logs"),
-                    file_name: Some(format!("log_{}", Local::now().format("%Y%m%d"))),
-                }),
+                Target::new(TargetKind::LogDir { file_name: None }),
             ])
             .format(|out, message, record| {
                 let timestamp = Local::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true);
@@ -88,7 +85,8 @@ pub fn run() {
             log_info,
             log_warn,
             log_error,
-            save_translation
+            save_translation,
+            select_mod_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

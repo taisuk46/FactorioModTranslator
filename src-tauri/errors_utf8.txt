@@ -1,0 +1,44 @@
+cargo :     Checking factoriomodtranslator v0.1.0 (C:
+\Users\taisu\.gemini\antigravity\project\factoriomodt
+ranslator_app\src-tauri)
+発生場所 行:1 文字:1
++ cargo check > errors.txt 2>&1; Get-Content errors.t
+xt
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Che 
+   cking fa..._app\src-tauri):String) [], RemoteExc  
+  eption
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+warning: unused import: `crate::services::logging::ma
+sk_sensitive`
+ --> src\services\settings_service.rs:9:5
+  |
+9 | use crate::services::logging::mask_sensitive;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(
+unused)]`) on by default
+
+error[E0533]: expected value, found struct variant `T
+argetKind::LogDir`
+  --> src\lib.rs:24:29
+   |
+24 |                 Target::new(TargetKind::LogDir),
+   |                             ^^^^^^^^^^^^^^^^^^ n
+ot a value
+   |
+help: you might have meant to create a new value of t
+he struct
+   |
+24 -                 Target::new(TargetKind::LogDir),
+24 +                 Target::new(TargetKind::LogDir {
+ file_name: /* value */ },
+   |
+
+For more information about this error, try `rustc --e
+xplain E0533`.
+warning: `factoriomodtranslator` (lib) generated 1 wa
+rning
+error: could not compile `factoriomodtranslator` (lib
+) due to 1 previous error; 1 warning emitted
