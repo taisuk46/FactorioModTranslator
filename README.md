@@ -1,73 +1,72 @@
 # Factorio Mod Translator
 
-Factorio 2.x (Space Age) 対応のMod翻訳ファイルを自動翻訳・管理するWindows向けGUIツールです。
+A GUI tool for Windows to automatically translate and manage Factorio 2.x (Space Age) Mod translation files.
 
-## 主な機能
+## Main Features
 
-- **Mod読み込み**: フォルダのModを直接読み込み
-- **翻訳エンジン**: DeepL API に対応
-- **差分翻訳**: 既存の翻訳ファイルを活かし、未翻訳部分のみを自動抽出して翻訳
-- **翻訳履歴**: 過去に行った翻訳をSQLiteに保存し、再利用可能
-- **ダークテーマ**: Factorioを彷彿とさせるオレンジ・グレー基調のUI
+- **Mod Loading**: Directly load Mod folders.
+- **Translation Engines**: Supports DeepL API.
+- **Delta Translation**: Automatically extracts and translates only untranslated parts, preserving existing translations.
+- **Translation History**: Saves past translations to an SQLite database for reuse.
+- **Dark Theme**: A polished UI based on Factorio's orange and gray color scheme.
 
-## 技術スタック
+## Tech Stack
 
 - Rust / Tauri 2.x
-- Vanilla JavaScript / HTML / CSS (フロントエンド)
-- reqwest (HTTP通信 - DeepL API)
-- rusqlite (SQLite - 翻訳履歴)
-- keyring (APIキー保存 - OS Credential Manager)
-- tauri-plugin-log (ログ出力)
+- Vanilla JavaScript / HTML / CSS (Frontend)
+- reqwest (HTTP communication - DeepL API)
+- rusqlite (SQLite - Translation History)
+- keyring (API key storage - OS Credential Manager)
+- tauri-plugin-log (Logging)
 
+## Usage
 
-## 使い方
+1. Launch the app and set your translation API keys in the [Settings] tab.
+2. In the [Mod Selection] tab, select the folder of the Mod you want to translate.
+3. Click the translate button to execute.
+4. Review/edit the results in the [Preview] tab and save.
 
-1. アプリを起動し、[Settings] タブで翻訳APIキーを設定します。
-2. [Mod Selection] タブで翻訳したいModのフォルダを選択します。
-3. 翻訳実行ボタンをクリックします。
-4. [Preview] タブで翻訳結果を確認・修正し、保存します。
+## Build Instructions
 
-## ビルド手順
-
-### 前提条件
+### Prerequisites
 - [Node.js](https://nodejs.org/) (LTS)
 - [Rust](https://www.rust-lang.org/tools/install)
 - [Tauri 2 CLI prerequisites](https://v2.tauri.app/start/prerequisites/)
 
-### セットアップ
+### Setup
 ```bash
 npm install
 ```
 
-### 開発ビルド（デバッグ実行）
-開発モードでアプリケーションを起動します。ホットリロードが有効です。
+### Development Build (Debug)
+Starts the application in development mode with hot-reloading enabled.
 
 ```bash
 npm run tauri dev
 ```
 
-### リリースビルド
-最適化された実行ファイルとNSISインストーラを生成します。
+### Release Build
+Generates optimized executables and an NSIS installer.
 
 ```bash
 npm run tauri build
 ```
 
-### 生成物の場所
-- **実行ファイル**: `src-tauri/target/release/factoriomodtranslator.exe`
-- **NSISインストーラ**: `src-tauri/target/release/bundle/nsis/FactorioModTranslator_x.x.x_x64-setup.exe` (~3.5MB)
+### Build Artifacts
+- **Executable**: `src-tauri/target/release/factoriomodtranslator.exe`
+- **NSIS Installer**: `src-tauri/target/release/bundle/nsis/FactorioModTranslator_x.x.x_x64-setup.exe` (~3.5MB)
 
-Windows 10以降ではWebView2が標準搭載されているため、追加のランタイムインストールは不要です。
+WebView2 runtime is pre-installed on Windows 10 and later, so no additional runtime installation is required.
 
-## ログ出力
+## Logs
 
-アプリケーションのログは以下の場所に出力されます:
+Application logs are output to:
 
-- **出力先**: `%LOCALAPPDATA%\FactorioModTranslator\logs\log_yyyyMMdd.log`
-- **フォーマット**: `[タイムスタンプ] [ログレベル] [ファイル名:行番号] メッセージ`
+- **Path**: `%LOCALAPPDATA%\FactorioModTranslator\logs\log_yyyyMMdd.log`
+- **Format**: `[Timestamp] [Level] [File:Line] Message`
 
-Rustバックエンドのログとフロントエンドのログが同一ファイルに統合されます。
+Both Rust backend and frontend logs are unified into this single file.
 
-## ライセンス
+## License
 
 MIT License
