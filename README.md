@@ -4,7 +4,7 @@ A GUI tool for Windows to automatically translate and manage Factorio 2.x (Space
 
 If you find this software useful, please buy me a cup of coffee!
 
-<a href="https://www.buymeacoffee.com/taisuk46"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=taisuk46&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff" /></a>
+[![Buy Me a Coffee](https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=taisuk46&button_colour=FFDD00&font_colour=000000&font_family=Cookie&outline_colour=000000&coffee_colour=ffffff)](https://www.buymeacoffee.com/taisuk46)
 
 ## Main Features
 
