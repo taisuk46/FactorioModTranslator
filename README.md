@@ -10,6 +10,8 @@ If you find this software useful, please buy me a cup of coffee!
 
 - **Mod Loading**: Directly load Mod folders.
 - **Translation Engines**: Supports DeepL API.
+- **Supported Languages**: Japanese, English, Chinese (Simplified/Traditional), Korean, French, German, Italian, Spanish, Portuguese, Russian.
+- **Smart Formatting**: Protects Factorio-specific tags (e.g., `__1__`, `[item=...]`) during translation to ensure they remain functional.
 - **Delta Translation**: Automatically extracts and translates only untranslated parts, preserving existing translations.
 - **Translation History**: Saves past translations to an SQLite database for reuse.
 - **Dark Theme**: A polished UI based on Factorio's orange and gray color scheme.
@@ -26,7 +28,7 @@ If you find this software useful, please buy me a cup of coffee!
 ## Usage
 
 1. Launch the app and set your translation API keys in the [Settings] tab.
-2. In the [Mod Selection] tab, select the folder of the Mod you want to translate.
+2. In the [Mod Selection] tab, select the folder of the Mod you want to translate. The mod folder must be unzipped beforehand, typically located at `%APPDATA%\Factorio\mods\[mod-folder]`.
 3. Click the translate button to execute.
 4. Review/edit the results in the [Preview] tab and save.
 
