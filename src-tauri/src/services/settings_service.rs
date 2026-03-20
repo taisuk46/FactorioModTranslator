@@ -44,7 +44,7 @@ impl SettingsService {
         AppSettings {
             selected_engine: TranslationEngineType::DeepL,
             factorio_install_path: "C:\\Program Files\\Factorio".to_string(),
-            ui_language: "ja".to_string(),
+            ui_language: "en".to_string(),
             last_mod_path: String::new(),
             default_source_lang: "en".to_string(),
             default_target_lang: "ja".to_string(),

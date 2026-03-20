@@ -30,7 +30,7 @@ async function init() {
     currentSettings = await invoke('get_settings');
     
     // Apply initial localization from Rust
-    await applyLocalization(currentSettings.ui_language || 'ja');
+    await applyLocalization(currentSettings.ui_language || 'en');
 
     // Initial load of content
     loadGlossary();
@@ -39,7 +39,7 @@ async function init() {
   } catch (e) {
     await warn(`Backend not available (Tauri check): ${e}`);
     // Fallback settings for UI preview
-    currentSettings = { selected_engine: 'DeepL', ui_language: 'ja' };
+    currentSettings = { selected_engine: 'DeepL', ui_language: 'en' };
   }
 
   // Mod Selection
