@@ -22,3 +22,8 @@ dist-ssr/
 
 # Rust / Tauri
 src-tauri/target/
+
+# Documentation and Development tools
+docs/*
+!docs/design_document.md
+.serena/

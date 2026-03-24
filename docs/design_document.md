@@ -817,7 +817,7 @@ flowchart TB
     end
 
     UserEdit --> MainJS
-    MainJS -->|invoke()| Commands
+    MainJS -->|invoke| Commands
     ModFolder --> ModLoader
     ModZip --> ModLoader
     ModLoader --> CfgParser
