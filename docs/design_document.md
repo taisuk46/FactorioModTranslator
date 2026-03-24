@@ -558,6 +558,13 @@ classDiagram
         +get_all_translations(lang) HashMap~String_String~
     }
 
+    class LogContext {
+        +new(function_name) Self
+        +complete()
+        +error(error)
+        +mask_sensitive(s) String
+    }
+
     class FactorioStringFormatter {
         +protect_placeholders(text) String
         +restore_placeholders(text) String
@@ -592,6 +599,7 @@ classDiagram
 
     class Commands {
         <<module: commands/mod.rs>>
+        +select_mod_path() Result~Option~String~~
         +load_mod(path) Result~ModInfo~
         +translate_mod(mod_info, mode, src, tgt, engine) Result~Vec~TranslationItem~~
         +get_settings() AppSettings
@@ -600,6 +608,7 @@ classDiagram
         +get_glossary() Result~Vec~GlossaryEntry~~
         +add_glossary_entry(entry) Result
         +remove_glossary_entry(term) Result
+        +save_translation(mod_info, translations, target_lang) Result
         +get_history() Result~Vec~TranslationRecord~~
         +load_vanilla_data(factorio_path, lang) Result
         +get_localized_strings(lang) Result~HashMap~
@@ -1092,6 +1101,7 @@ factoriomodtranslator_app/
 │   │       ├── formatter.rs      # プレースホルダー保護
 │   │       ├── glossary_service.rs
 │   │       ├── localization_service.rs
+│   │       ├── logging.rs        # ログ出力コンテキスト管理
 │   │       ├── mod_loader.rs     # フォルダ/ZIP読込
 │   │       ├── orchestrator.rs   # 翻訳実行制御
 │   │       ├── settings_service.rs
