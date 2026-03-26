@@ -178,8 +178,19 @@ mod tests {
     }
 
     #[test]
+    #[cfg(target_os = "windows")]
     fn test_manage_settings_invalid_path_should_return_error() {
+        // Windows: use Windows-style invalid path
         let service = SettingsService::new(Path::new("X:\\invalid_drive\\impossible_path\\data.json"));
+        let result = service.save_settings(&AppSettings::default());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn test_manage_settings_invalid_path_should_return_error() {
+        // Linux: use Linux-style invalid path (parent directory doesn't exist)
+        let service = SettingsService::new(Path::new("/invalid_drive/impossible_path/data.json"));
         let result = service.save_settings(&AppSettings::default());
         assert!(result.is_err());
     }
