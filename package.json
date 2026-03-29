@@ -4,7 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",
@@ -12,5 +14,11 @@
   },
   "dependencies": {
     "@tauri-apps/plugin-log": "^2.8.0"
+  },
+  "optionalDependencies": {
+    "@img/sharp-win32-x64": "^0.34.5",
+    "@img/sharp-linux-arm64": "^0.34.5",
+    "@tauri-apps/cli-win32-x64-msvc": "^2.10.1",
+    "@tauri-apps/cli-linux-arm64-gnu": "^2.10.1"
   }
 }

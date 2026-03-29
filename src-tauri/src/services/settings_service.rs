@@ -40,10 +40,16 @@ impl SettingsService {
             info!("{}", json!({ "event": "settings_not_found", "path": self.settings_path.display().to_string(), "action": "using_defaults" }));
         }
         
+        let default_factorio_path = if cfg!(target_os = "windows") {
+            "C:\\Program Files\\Factorio".to_string()
+        } else {
+            "~/.factorio".to_string()
+        };
+
         // Defaults
         AppSettings {
             selected_engine: TranslationEngineType::DeepL,
-            factorio_install_path: "C:\\Program Files\\Factorio".to_string(),
+            factorio_install_path: default_factorio_path,
             ui_language: "en".to_string(),
             last_mod_path: String::new(),
             default_source_lang: "en".to_string(),
@@ -111,9 +117,18 @@ impl SettingsService {
 
         let mut hasher = Sha256::new();
         // Use machine/user specific info to derive a key that's unique to this environment
-        hasher.update(env::var("COMPUTERNAME").unwrap_or_else(|_| "fixed_comp".to_string()));
-        hasher.update(env::var("USERDOMAIN").unwrap_or_else(|_| "fixed_domain".to_string()));
-        hasher.update(env::var("USERNAME").unwrap_or_else(|_| "fixed_user".to_string()));
+        #[cfg(target_os = "windows")]
+        {
+            hasher.update(env::var("COMPUTERNAME").unwrap_or_else(|_| "fixed_comp".to_string()));
+            hasher.update(env::var("USERDOMAIN").unwrap_or_else(|_| "fixed_domain".to_string()));
+            hasher.update(env::var("USERNAME").unwrap_or_else(|_| "fixed_user".to_string()));
+        }
+        #[cfg(target_os = "linux")]
+        {
+            hasher.update(env::var("HOSTNAME").unwrap_or_else(|_| "linux_host".to_string()));
+            hasher.update(env::var("USER").unwrap_or_else(|_| "linux_user".to_string()));
+        }
+
         // Add a salt for the app
         hasher.update(b"factoriomodtranslator_salt_2026");
         
