@@ -310,20 +310,24 @@ fn save_to_zip(
         translation_map.insert(key, t);
     }
 
-    // 全エントリをコピーし、対象言語の.cfgは翻訳済みで差し替え
+    // ソース言語 (locale_filesの最初の言語) を特定
+    let source_lang = mod_info.locale_files.first()
+        .map(|f| f.language_code.clone())
+        .unwrap_or_else(|| "en".to_string());
+    let source_locale_prefix = format!("{}locale/{}/", root_folder, source_lang);
+    let target_locale_prefix = format!("{}locale/{}/", root_folder, target_lang);
+
+    // 全エントリをコピーし、ソース言語の.cfgは対象言語に変換して追加
     for i in 0..src_archive.len() {
         let mut entry = src_archive.by_index(i)
             .map_err(|e| e.to_string())?;
         let entry_name = entry.name().to_string();
 
-        // 対象言語の.cfgファイルかチェック
-        let target_locale_prefix = format!("{}locale/{}/", root_folder, target_lang);
-        if entry_name.starts_with(&target_locale_prefix) && entry_name.ends_with(".cfg") {
-            // 対応するlocale_fileを探す (en -> ja に変換)
-            let original_lang_prefix = format!("{}locale/en/", root_folder);
-            let original_file_name = entry_name.replace(&target_locale_prefix, &original_lang_prefix);
-            
-            if let Some(locale_file) = mod_info.locale_files.iter().find(|f| f.file_path == original_file_name || f.file_path.ends_with(&entry_name.split('/').last().unwrap_or(""))) {
+        // ソース言語の.cfgファイルかチェック
+        if entry_name.starts_with(&source_locale_prefix) && entry_name.ends_with(".cfg") {
+            // 対応するlocale_fileを探す
+            if let Some(locale_file) = mod_info.locale_files.iter().find(|f| f.file_path == entry_name) {
+                // 翻訳済みのエントリで上書き
                 let mut updated_entries = locale_file.entries.clone();
                 for entry_item in &mut updated_entries {
                     let key = format!("{}.{}", entry_item.section, entry_item.key);
@@ -340,7 +344,9 @@ fn save_to_zip(
                     header_comments: locale_file.header_comments.clone(),
                 };
 
-                dst_zip.start_file(&entry_name, options)
+                // 新しいターゲット言語のファイルパスを作成
+                let target_file_name = entry_name.replace(&source_locale_prefix, &target_locale_prefix);
+                dst_zip.start_file(&target_file_name, options)
                     .map_err(|e| format!("Failed to start file in ZIP: {}", e))?;
                 let mut cursor = std::io::Cursor::new(Vec::new());
                 crate::services::cfg_parser::CfgParser::write(&cfg_file, &mut cursor)
@@ -423,8 +429,10 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
     use std::fs;
+    use std::io::Write as _;
     use crate::models::cfg::{CfgFile, CfgEntry};
     use crate::models::enums::TranslationSource;
+    use crate::services::logging::LogContext;
 
     #[tokio::test]
     async fn test_save_translation_writes_files_correctly() {
@@ -479,6 +487,163 @@ mod tests {
 
         let content = fs::read_to_string(saved_file).unwrap();
         assert!(content.contains("[item-name]"));
+        assert!(content.contains("iron-plate=鉄板"));
+    }
+
+    #[tokio::test]
+    async fn test_save_to_folder_creates_locale_structure() {
+        let dir = tempdir().unwrap();
+        let target_lang = "ja".to_string();
+        
+        let mod_info = ModInfo {
+            name: "test_mod".to_string(),
+            version: "1.0.0".to_string(),
+            title: "Test Mod".to_string(),
+            author: "Author".to_string(),
+            source_path: "/dummy/path".to_string(),
+            source_type: crate::models::enums::ModSourceType::Zip,
+            factorio_version: None,
+            locale_files: vec![
+                CfgFile {
+                    file_path: "locale/en/strings.cfg".to_string(),
+                    language_code: "en".to_string(),
+                    entries: vec![
+                        CfgEntry {
+                            section: "item-name".to_string(),
+                            key: "iron-plate".to_string(),
+                            value: "Iron Plate".to_string(),
+                            comment: None,
+                        }
+                    ],
+                    section_order: vec!["item-name".to_string()],
+                    header_comments: vec![],
+                }
+            ],
+        };
+
+        let translations = vec![
+            TranslationItem {
+                section: "item-name".to_string(),
+                key: "iron-plate".to_string(),
+                source_text: "Iron Plate".to_string(),
+                translated_text: "鉄板".to_string(),
+                vanilla_translation: None,
+                source: TranslationSource::Manual,
+                is_edited: true,
+            }
+        ];
+
+        let ctx = LogContext::new("test");
+        let result = save_to_folder(&mod_info, &translations, &target_lang, dir.path().to_str().unwrap(), &ctx);
+        assert!(result.is_ok());
+
+        let saved_file = dir.path().join("locale").join(&target_lang).join("strings.cfg");
+        assert!(saved_file.exists());
+
+        let content = fs::read_to_string(saved_file).unwrap();
+        assert!(content.contains("[item-name]"));
+        assert!(content.contains("iron-plate=鉄板"));
+    }
+
+    #[tokio::test]
+    async fn test_save_to_folder_no_matching_translations() {
+        let dir = tempdir().unwrap();
+        let target_lang = "ja".to_string();
+        
+        let mod_info = ModInfo {
+            name: "test_mod".to_string(),
+            version: "1.0.0".to_string(),
+            title: "Test Mod".to_string(),
+            author: "Author".to_string(),
+            source_path: "/dummy/path".to_string(),
+            source_type: crate::models::enums::ModSourceType::Zip,
+            factorio_version: None,
+            locale_files: vec![
+                CfgFile {
+                    file_path: "locale/en/strings.cfg".to_string(),
+                    language_code: "en".to_string(),
+                    entries: vec![
+                        CfgEntry {
+                            section: "item-name".to_string(),
+                            key: "iron-plate".to_string(),
+                            value: "Iron Plate".to_string(),
+                            comment: None,
+                        }
+                    ],
+                    section_order: vec!["item-name".to_string()],
+                    header_comments: vec![],
+                }
+            ],
+        };
+
+        // 翻訳に一致するエントリなし
+        let translations = vec![
+            TranslationItem {
+                section: "other-section".to_string(),
+                key: "other-key".to_string(),
+                source_text: "Other".to_string(),
+                translated_text: "他".to_string(),
+                vanilla_translation: None,
+                source: TranslationSource::Manual,
+                is_edited: true,
+            }
+        ];
+
+        let ctx = LogContext::new("test");
+        let result = save_to_folder(&mod_info, &translations, &target_lang, dir.path().to_str().unwrap(), &ctx);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("No translations were found"));
+    }
+
+    #[tokio::test]
+    async fn test_save_to_zip_creates_translated_zip() {
+        let dir = tempdir().unwrap();
+        
+        // テスト用のZIPファイルを作成
+        let source_zip_path = dir.path().join("test-mod_1.0.0.zip");
+        let source_file = fs::File::create(&source_zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(source_file);
+        let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        zip.start_file("test-mod_1.0.0/info.json", options).unwrap();
+        zip.write_all(b"{\"name\": \"test-mod\", \"version\": \"1.0.0\"}").unwrap();
+
+        zip.start_file("test-mod_1.0.0/locale/en/strings.cfg", options).unwrap();
+        zip.write_all(b"[item-name]\niron-plate=Iron Plate\n").unwrap();
+
+        zip.finish().unwrap();
+
+        // ModLoaderで読み込み
+        let mut mod_info = crate::services::mod_loader::ModLoader::load_from_zip(source_zip_path.to_str().unwrap()).unwrap();
+        mod_info.source_path = source_zip_path.to_str().unwrap().to_string();
+
+        let translations = vec![
+            TranslationItem {
+                section: "item-name".to_string(),
+                key: "iron-plate".to_string(),
+                source_text: "Iron Plate".to_string(),
+                translated_text: "鉄板".to_string(),
+                vanilla_translation: None,
+                source: TranslationSource::API,
+                is_edited: false,
+            }
+        ];
+
+        let output_zip_path = dir.path().join("test-mod_ja.zip");
+        let ctx = LogContext::new("test");
+        let result = save_to_zip(&mod_info, &translations, "ja", output_zip_path.to_str().unwrap(), &ctx);
+        assert!(result.is_ok());
+        assert!(output_zip_path.exists());
+
+        // 出力ZIPを検証
+        let output_file = fs::File::open(&output_zip_path).unwrap();
+        let mut output_archive = zip::ZipArchive::new(output_file).unwrap();
+        
+        // locale/ja/strings.cfgが含まれているか確認
+        let mut ja_cfg = output_archive.by_name("test-mod_1.0.0/locale/ja/strings.cfg").unwrap();
+        let mut content = String::new();
+        ja_cfg.read_to_string(&mut content).unwrap();
         assert!(content.contains("iron-plate=鉄板"));
     }
 }

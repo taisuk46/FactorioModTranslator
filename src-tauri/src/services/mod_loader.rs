@@ -163,7 +163,7 @@ mod tests {
     use super::*;
     use tempfile::tempdir;
     use std::fs::{self, File};
-    use std::io::Write;
+    use std::io::Write as _;
 
     #[test]
     fn test_load_from_folder_success() {
@@ -204,6 +204,108 @@ mod tests {
         let file = File::create(&zip_path).unwrap();
         let mut zip = zip::ZipWriter::new(file);
         zip.finish().unwrap();
+
+        let result = ModLoader::load_from_zip(zip_path.to_str().unwrap());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_load_from_zip_with_locale_files() {
+        let dir = tempdir().unwrap();
+        let zip_path = dir.path().join("test-mod_1.0.0.zip");
+        let file = File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        // info.json
+        zip.start_file("test-mod_1.0.0/info.json", options).unwrap();
+        zip.write_all(b"{\"name\": \"test-mod\", \"version\": \"1.0.0\", \"title\": \"Test Mod\"}").unwrap();
+
+        // locale/en/strings.cfg
+        zip.start_file("test-mod_1.0.0/locale/en/strings.cfg", options).unwrap();
+        zip.write_all(b"[item-name]\niron-plate=Iron Plate\ncopper-plate=Copper Plate\n").unwrap();
+
+        // locale/ja/strings.cfg
+        zip.start_file("test-mod_1.0.0/locale/ja/strings.cfg", options).unwrap();
+        zip.write_all("[item-name]\niron-plate=鉄板\n".as_bytes()).unwrap();
+
+        zip.finish().unwrap();
+
+        let result = ModLoader::load_from_zip(zip_path.to_str().unwrap());
+        assert!(result.is_ok());
+        let mod_info = result.unwrap();
+        
+        assert_eq!(mod_info.name, "test-mod");
+        assert_eq!(mod_info.version, "1.0.0");
+        assert_eq!(mod_info.title, "Test Mod");
+        assert_eq!(mod_info.source_type, crate::models::enums::ModSourceType::Zip);
+        assert_eq!(mod_info.locale_files.len(), 2);
+
+        // en locale
+        let en_file = mod_info.locale_files.iter().find(|f| f.language_code == "en").unwrap();
+        assert_eq!(en_file.entries.len(), 2);
+        assert!(en_file.entries.iter().any(|e| e.key == "iron-plate" && e.value == "Iron Plate"));
+
+        // ja locale
+        let ja_file = mod_info.locale_files.iter().find(|f| f.language_code == "ja").unwrap();
+        assert_eq!(ja_file.entries.len(), 1);
+        assert!(ja_file.entries.iter().any(|e| e.key == "iron-plate" && e.value == "鉄板"));
+    }
+
+    #[test]
+    fn test_load_from_zip_without_info_json() {
+        let dir = tempdir().unwrap();
+        let zip_path = dir.path().join("no-info.zip");
+        let file = File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        // info.jsonなし、localeのみ
+        zip.start_file("test-mod_1.0.0/locale/en/strings.cfg", options).unwrap();
+        zip.write_all(b"[item-name]\niron-plate=Iron Plate\n").unwrap();
+        zip.finish().unwrap();
+
+        let result = ModLoader::load_from_zip(zip_path.to_str().unwrap());
+        assert!(result.is_ok());
+        let mod_info = result.unwrap();
+        
+        // info.jsonがないのでメタデータは空
+        assert_eq!(mod_info.name, "");
+        assert_eq!(mod_info.version, "");
+        // localeは読み込まれる
+        assert_eq!(mod_info.locale_files.len(), 1);
+    }
+
+    #[test]
+    fn test_load_from_zip_without_locale_folder() {
+        let dir = tempdir().unwrap();
+        let zip_path = dir.path().join("no-locale.zip");
+        let file = File::create(&zip_path).unwrap();
+        let mut zip = zip::ZipWriter::new(file);
+        let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        // info.jsonのみ、localeなし
+        zip.start_file("test-mod_1.0.0/info.json", options).unwrap();
+        zip.write_all(b"{\"name\": \"test-mod\", \"version\": \"1.0.0\"}").unwrap();
+        zip.finish().unwrap();
+
+        let result = ModLoader::load_from_zip(zip_path.to_str().unwrap());
+        assert!(result.is_ok());
+        let mod_info = result.unwrap();
+        
+        assert_eq!(mod_info.name, "test-mod");
+        // localeファイルは空
+        assert_eq!(mod_info.locale_files.len(), 0);
+    }
+
+    #[test]
+    fn test_load_from_zip_corrupted() {
+        let dir = tempdir().unwrap();
+        let zip_path = dir.path().join("corrupted.zip");
+        fs::write(&zip_path, b"This is not a valid ZIP file").unwrap();
 
         let result = ModLoader::load_from_zip(zip_path.to_str().unwrap());
         assert!(result.is_err());
