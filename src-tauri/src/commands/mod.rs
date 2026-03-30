@@ -36,6 +36,16 @@ pub async fn select_mod_path() -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+pub async fn select_mod_zip_path() -> Result<Option<String>, String> {
+    let res = rfd::FileDialog::new()
+        .set_title("Select Factorio Mod ZIP File")
+        .add_filter("ZIP files", &["zip"])
+        .pick_file();
+    
+    Ok(res.map(|p| p.to_string_lossy().to_string()))
+}
+
+#[tauri::command]
 pub async fn get_localized_strings(state: State<'_, AppState>, lang: String) -> Result<std::collections::HashMap<String, String>, String> {
     Ok(state.localization_service.get_all_translations(&lang))
 }

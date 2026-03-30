@@ -3,7 +3,7 @@ pub mod services;
 pub mod commands;
 
 use tauri::Manager;
-use crate::commands::{AppState, load_mod, translate_mod, get_settings, save_settings, save_api_key, get_glossary, add_glossary_entry, remove_glossary_entry, get_history, load_vanilla_data, get_localized_strings, log_info, log_warn, log_error, save_translation, select_mod_path};
+use crate::commands::{AppState, load_mod, translate_mod, get_settings, save_settings, save_api_key, get_glossary, add_glossary_entry, remove_glossary_entry, get_history, load_vanilla_data, get_localized_strings, log_info, log_warn, log_error, save_translation, select_mod_path, select_mod_zip_path};
 use crate::services::vanilla_translation_service::VanillaTranslationService;
 use crate::services::glossary_service::GlossaryService;
 use crate::services::translation_history_service::TranslationHistoryService;
@@ -86,7 +86,8 @@ pub fn run() {
             log_warn,
             log_error,
             save_translation,
-            select_mod_path
+            select_mod_path,
+            select_mod_zip_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
