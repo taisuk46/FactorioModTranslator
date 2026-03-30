@@ -42,11 +42,33 @@ async function init() {
     currentSettings = { selected_engine: 'DeepL', ui_language: 'en' };
   }
 
-  // Mod Selection
-  const btnBrowse = document.getElementById('btn-browse');
-  if (btnBrowse) {
-    btnBrowse.addEventListener('click', async () => {
+  // Folder Selection
+  const btnBrowseFolder = document.getElementById('btn-browse-folder');
+  if (btnBrowseFolder) {
+    btnBrowseFolder.addEventListener('click', async () => {
       const path = await invoke('select_mod_path');
+      if (path) {
+        try {
+          currentMod = await invoke('load_mod', { path });
+          await info({ event: "mod_loaded_ui", title: currentMod.title, version: currentMod.version });
+          showStatus(`Loaded: ${currentMod.title} (${currentMod.version})`);
+          
+          updateSourceLanguages();
+          switchView('translation-preview');
+          renderPreview();
+        } catch (e) {
+          await error(`Error loading mod: ${e}`);
+          showError("Error loading mod: " + e);
+        }
+      }
+    });
+  }
+
+  // ZIP Selection
+  const btnBrowseZip = document.getElementById('btn-browse-zip');
+  if (btnBrowseZip) {
+    btnBrowseZip.addEventListener('click', async () => {
+      const path = await invoke('select_mod_zip_path');
       if (path) {
         try {
           currentMod = await invoke('load_mod', { path });
