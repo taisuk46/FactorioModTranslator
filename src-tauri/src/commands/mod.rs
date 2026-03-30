@@ -1,4 +1,5 @@
 use tauri::{AppHandle, Manager, State, Emitter};
+use std::io::Read;
 use std::path::PathBuf;
 
 use crate::models::mod_info::ModInfo;
@@ -169,19 +170,62 @@ pub async fn save_translation(
     info!("{}", json!({ "request_id": ctx.request_id, "mod": mod_info.name, "target_lang": target_lang }));
 
     if mod_info.source_type == crate::models::enums::ModSourceType::Zip {
-        let err = "Saving translations directly to ZIP files is not supported yet. Please extract the mod to a folder first.";
-        error!("{}", json!({ "request_id": ctx.request_id, "error": err }));
-        return Err(err.to_string());
+        // ZIPソースの場合、保存形式を選択
+        let save_result = rfd::MessageDialog::new()
+            .set_title("保存形式の選択")
+            .set_description("ZIPファイルから読み込まれたModです。\n「はい」= フォルダに保存\n「いいえ」= ZIPに保存")
+            .set_buttons(rfd::MessageButtons::YesNo)
+            .show();
+
+        match save_result {
+            rfd::MessageDialogResult::Yes => {
+                // フォルダ保存
+                let save_dir = rfd::FileDialog::new()
+                    .set_title("保存先フォルダを選択")
+                    .pick_folder()
+                    .ok_or("保存先が選択されませんでした")?;
+                
+                save_to_folder(&mod_info, &translations, &target_lang, save_dir.to_str().unwrap(), &ctx)?;
+            }
+            rfd::MessageDialogResult::No => {
+                // ZIP保存
+                let save_path = rfd::FileDialog::new()
+                    .set_title("保存先ZIPファイルを選択")
+                    .add_filter("ZIP files", &["zip"])
+                    .save_file()
+                    .ok_or("保存先が選択されませんでした")?;
+                
+                save_to_zip(&mod_info, &translations, &target_lang, save_path.to_str().unwrap(), &ctx)?;
+            }
+            _ => {
+                return Err("保存がキャンセルされました".to_string());
+            }
+        }
+    } else {
+        // フォルダソースの場合、既存の処理
+        save_to_folder(&mod_info, &translations, &target_lang, &mod_info.source_path, &ctx)?;
     }
 
+    ctx.complete();
+    Ok(())
+}
+
+fn save_to_folder(
+    mod_info: &ModInfo,
+    translations: &[TranslationItem],
+    target_lang: &str,
+    base_path: &str,
+    ctx: &LogContext,
+) -> Result<(), String> {
     let mut success_count = 0;
     let mut total_files = 0;
 
-    for mut locale_file in mod_info.locale_files {
+    for locale_file in &mod_info.locale_files {
         total_files += 1;
-        // We only overwrite entries if we have a translation for them.
         let mut entries_updated = 0;
-        for entry in &mut locale_file.entries {
+        let mut updated_entries = locale_file.entries.clone();
+        
+        for entry in &mut updated_entries {
             if let Some(t) = translations.iter().find(|t| t.section == entry.section && t.key == entry.key) {
                 entry.value = t.translated_text.clone();
                 entries_updated += 1;
@@ -189,23 +233,37 @@ pub async fn save_translation(
         }
         
         if entries_updated == 0 {
-            info!("{}", json!({ "request_id": ctx.request_id, "event": "skip_file", "path": locale_file.file_path, "reason": "no_entries_to_update" }));
             continue;
         }
 
-        let file_name = std::path::Path::new(&locale_file.file_path).file_name().ok_or_else(|| "Invalid file path".to_string())?;
-        let path = std::path::Path::new(&mod_info.source_path).join("locale").join(&target_lang).join(file_name);
+        let file_name = std::path::Path::new(&locale_file.file_path)
+            .file_name()
+            .ok_or_else(|| "Invalid file path".to_string())?;
+        let path = std::path::Path::new(base_path)
+            .join("locale")
+            .join(target_lang)
+            .join(file_name);
         
-        info!("{}", json!({ "request_id": ctx.request_id, "event": "saving_file", "path": path.display().to_string(), "entries_updated": entries_updated }));
-
         if let Some(parent) = path.parent() {
             if !parent.exists() {
-                std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create dir {}: {}", parent.display(), e))?;
+                std::fs::create_dir_all(parent)
+                    .map_err(|e| format!("Failed to create dir {}: {}", parent.display(), e))?;
             }
         }
 
-        let file = std::fs::File::create(&path).map_err(|e| format!("Failed to create file {}: {}", path.display(), e))?;
-        crate::services::cfg_parser::CfgParser::write(&locale_file, file).map_err(|e| format!("Failed to write cfg file {}: {}", path.display(), e))?;
+        let cfg_file = crate::models::cfg::CfgFile {
+            file_path: locale_file.file_path.clone(),
+            language_code: target_lang.to_string(),
+            entries: updated_entries,
+            section_order: locale_file.section_order.clone(),
+            header_comments: locale_file.header_comments.clone(),
+        };
+
+        let file = std::fs::File::create(&path)
+            .map_err(|e| format!("Failed to create file {}: {}", path.display(), e))?;
+        crate::services::cfg_parser::CfgParser::write(&cfg_file, file)
+            .map_err(|e| format!("Failed to write cfg file {}: {}", path.display(), e))?;
+        
         info!("{}", json!({ "request_id": ctx.request_id, "event": "file_saved", "path": path.display().to_string() }));
         success_count += 1;
     }
@@ -215,7 +273,106 @@ pub async fn save_translation(
     }
 
     info!("{}", json!({ "request_id": ctx.request_id, "event": "save_translation_completed", "saved_files": success_count }));
-    ctx.complete();
+    Ok(())
+}
+
+fn save_to_zip(
+    mod_info: &ModInfo,
+    translations: &[TranslationItem],
+    target_lang: &str,
+    zip_path: &str,
+    ctx: &LogContext,
+) -> Result<(), String> {
+    // 元のZIPを開く
+    let src_file = std::fs::File::open(&mod_info.source_path)
+        .map_err(|e| format!("Failed to open source ZIP: {}", e))?;
+    let mut src_archive = zip::ZipArchive::new(src_file)
+        .map_err(|e| format!("Failed to read source ZIP: {}", e))?;
+
+    // 新しいZIPを作成
+    let dst_file = std::fs::File::create(zip_path)
+        .map_err(|e| format!("Failed to create destination ZIP: {}", e))?;
+    let mut dst_zip = zip::ZipWriter::new(dst_file);
+
+    let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated);
+
+    // Factorio modsのルートフォルダを取得
+    let first_entry_name = src_archive.by_index(0)
+        .map_err(|e| e.to_string())?
+        .name().to_string();
+    let root_folder = first_entry_name.split('/').next().unwrap_or_default().to_string() + "/";
+
+    // 翻訳済みエントリのマップを作成
+    let mut translation_map: std::collections::HashMap<String, &TranslationItem> = std::collections::HashMap::new();
+    for t in translations {
+        let key = format!("{}.{}", t.section, t.key);
+        translation_map.insert(key, t);
+    }
+
+    // 全エントリをコピーし、対象言語の.cfgは翻訳済みで差し替え
+    for i in 0..src_archive.len() {
+        let mut entry = src_archive.by_index(i)
+            .map_err(|e| e.to_string())?;
+        let entry_name = entry.name().to_string();
+
+        // 対象言語の.cfgファイルかチェック
+        let target_locale_prefix = format!("{}locale/{}/", root_folder, target_lang);
+        if entry_name.starts_with(&target_locale_prefix) && entry_name.ends_with(".cfg") {
+            // 対応するlocale_fileを探す (en -> ja に変換)
+            let original_lang_prefix = format!("{}locale/en/", root_folder);
+            let original_file_name = entry_name.replace(&target_locale_prefix, &original_lang_prefix);
+            
+            if let Some(locale_file) = mod_info.locale_files.iter().find(|f| f.file_path == original_file_name || f.file_path.ends_with(&entry_name.split('/').last().unwrap_or(""))) {
+                let mut updated_entries = locale_file.entries.clone();
+                for entry_item in &mut updated_entries {
+                    let key = format!("{}.{}", entry_item.section, entry_item.key);
+                    if let Some(t) = translation_map.get(&key) {
+                        entry_item.value = t.translated_text.clone();
+                    }
+                }
+
+                let cfg_file = crate::models::cfg::CfgFile {
+                    file_path: entry_name.clone(),
+                    language_code: target_lang.to_string(),
+                    entries: updated_entries,
+                    section_order: locale_file.section_order.clone(),
+                    header_comments: locale_file.header_comments.clone(),
+                };
+
+                dst_zip.start_file(&entry_name, options)
+                    .map_err(|e| format!("Failed to start file in ZIP: {}", e))?;
+                let mut cursor = std::io::Cursor::new(Vec::new());
+                crate::services::cfg_parser::CfgParser::write(&cfg_file, &mut cursor)
+                    .map_err(|e| format!("Failed to write cfg to ZIP: {}", e))?;
+                std::io::Write::write_all(&mut dst_zip, &cursor.into_inner())
+                    .map_err(|e| format!("Failed to write to ZIP: {}", e))?;
+            } else {
+                // 対応するlocale_fileが見つからない場合はそのままコピー
+                dst_zip.start_file(&entry_name, options)
+                    .map_err(|e| format!("Failed to start file in ZIP: {}", e))?;
+                let mut buf = Vec::new();
+                entry.read_to_end(&mut buf)
+                    .map_err(|e| format!("Failed to read entry: {}", e))?;
+                std::io::Write::write_all(&mut dst_zip, &buf)
+                    .map_err(|e| format!("Failed to write to ZIP: {}", e))?;
+            }
+        } else {
+            // その他のエントリはそのままコピー
+            dst_zip.start_file(&entry_name, options)
+                .map_err(|e| format!("Failed to start file in ZIP: {}", e))?;
+            let mut buf = Vec::new();
+            entry.read_to_end(&mut buf)
+                .map_err(|e| format!("Failed to read entry: {}", e))?;
+            std::io::Write::write_all(&mut dst_zip, &buf)
+                .map_err(|e| format!("Failed to write to ZIP: {}", e))?;
+        }
+    }
+
+    dst_zip.finish()
+        .map_err(|e| format!("Failed to finalize ZIP: {}", e))?;
+
+    info!("{}", json!({ "request_id": ctx.request_id, "event": "zip_saved", "path": zip_path }));
     Ok(())
 }
 
