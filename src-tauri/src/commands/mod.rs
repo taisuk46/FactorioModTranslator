@@ -283,6 +283,24 @@ fn save_to_zip(
     zip_path: &str,
     ctx: &LogContext,
 ) -> Result<(), String> {
+    // ソースZIPと保存先が同一ファイルかチェック
+    let source_abs = std::path::Path::new(&mod_info.source_path)
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve source path: {}", e))?;
+    let dest_abs = std::path::Path::new(zip_path)
+        .canonicalize()
+        .unwrap_or_else(|_| std::path::Path::new(zip_path).to_path_buf());
+
+    let is_same_file = source_abs == dest_abs;
+
+    // 同一ファイルの場合は一時ファイルに書き出す
+    let actual_zip_path = if is_same_file {
+        let tmp = source_abs.with_extension("zip.tmp");
+        tmp.to_str().unwrap().to_string()
+    } else {
+        zip_path.to_string()
+    };
+
     // 元のZIPを開く
     let src_file = std::fs::File::open(&mod_info.source_path)
         .map_err(|e| format!("Failed to open source ZIP: {}", e))?;
@@ -290,7 +308,7 @@ fn save_to_zip(
         .map_err(|e| format!("Failed to read source ZIP: {}", e))?;
 
     // 新しいZIPを作成
-    let dst_file = std::fs::File::create(zip_path)
+    let dst_file = std::fs::File::create(&actual_zip_path)
         .map_err(|e| format!("Failed to create destination ZIP: {}", e))?;
     let mut dst_zip = zip::ZipWriter::new(dst_file);
 
@@ -377,6 +395,14 @@ fn save_to_zip(
 
     dst_zip.finish()
         .map_err(|e| format!("Failed to finalize ZIP: {}", e))?;
+
+    // 一時ファイルに保存した場合は元ファイルと置換
+    if is_same_file {
+        std::fs::remove_file(&source_abs)
+            .map_err(|e| format!("Failed to remove original ZIP: {}", e))?;
+        std::fs::rename(&actual_zip_path, &source_abs)
+            .map_err(|e| format!("Failed to replace ZIP: {}", e))?;
+    }
 
     info!("{}", json!({ "request_id": ctx.request_id, "event": "zip_saved", "path": zip_path }));
     Ok(())
@@ -645,5 +671,149 @@ mod tests {
         let mut content = String::new();
         ja_cfg.read_to_string(&mut content).unwrap();
         assert!(content.contains("iron-plate=鉄板"));
+    }
+
+    #[tokio::test]
+    async fn test_save_to_zip_same_path_as_source() {
+        let dir = tempdir().unwrap();
+        // info.json
+        let info_content = "{\"name\": \"test-mod\", \"version\": \"1.0.0\"}";
+        // locale
+        let locale_content = "[item-name]\niron-plate=Iron Plate\n";
+
+        let source_zip_path = dir.path().join("test-mod_1.0.0.zip");
+        {
+            let source_file = fs::File::create(&source_zip_path).unwrap();
+            let mut zip = zip::ZipWriter::new(source_file);
+            let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated);
+
+            zip.start_file("test-mod_1.0.0/info.json", options).unwrap();
+            zip.write_all(info_content.as_bytes()).unwrap();
+
+            zip.start_file("test-mod_1.0.0/locale/en/strings.cfg", options).unwrap();
+            zip.write_all(locale_content.as_bytes()).unwrap();
+
+            zip.finish().unwrap();
+        }
+
+        // ModLoaderで読み込み
+        let mut mod_info = crate::services::mod_loader::ModLoader::load_from_zip(source_zip_path.to_str().unwrap()).unwrap();
+        mod_info.source_path = source_zip_path.to_str().unwrap().to_string();
+
+        let translations = vec![
+            TranslationItem {
+                section: "item-name".to_string(),
+                key: "iron-plate".to_string(),
+                source_text: "Iron Plate".to_string(),
+                translated_text: "鉄板".to_string(),
+                vanilla_translation: None,
+                source: TranslationSource::API,
+                is_edited: false,
+            }
+        ];
+
+        // 同一パスに保存
+        let ctx = LogContext::new("test");
+        let result = save_to_zip(&mod_info, &translations, "ja", source_zip_path.to_str().unwrap(), &ctx);
+        assert!(result.is_ok());
+        assert!(source_zip_path.exists());
+
+        // 出力ZIPを検証
+        let output_file = fs::File::open(&source_zip_path).unwrap();
+        let mut output_archive = zip::ZipArchive::new(output_file).unwrap();
+
+        // locale/ja/strings.cfgが含まれているか確認
+        {
+            let mut ja_cfg = output_archive.by_name("test-mod_1.0.0/locale/ja/strings.cfg").unwrap();
+            let mut content = String::new();
+            ja_cfg.read_to_string(&mut content).unwrap();
+            assert!(content.contains("iron-plate=鉄板"));
+        }
+
+        // info.jsonも含まれているか確認
+        {
+            let mut info = output_archive.by_name("test-mod_1.0.0/info.json").unwrap();
+            let mut info_content = String::new();
+            info.read_to_string(&mut info_content).unwrap();
+            assert!(info_content.contains("test-mod"));
+        }
+    }
+
+    #[tokio::test]
+    async fn test_save_to_zip_all_files_copied() {
+        let dir = tempdir().unwrap();
+        // info.json
+        let info_content = "{\"name\": \"test-mod\", \"version\": \"1.0.0\"}";
+        // locale
+        let locale_content = "[item-name]\niron-plate=Iron Plate\n";
+
+        let source_zip_path = dir.path().join("test-mod_1.0.0.zip");
+        {
+            let source_file = fs::File::create(&source_zip_path).unwrap();
+            let mut zip = zip::ZipWriter::new(source_file);
+            let options: zip::write::FileOptions<()> = zip::write::FileOptions::default()
+                .compression_method(zip::CompressionMethod::Deflated);
+
+            zip.start_file("test-mod_1.0.0/info.json", options).unwrap();
+            zip.write_all(info_content.as_bytes()).unwrap();
+
+            zip.start_file("test-mod_1.0.0/locale/en/strings.cfg", options).unwrap();
+            zip.write_all(locale_content.as_bytes()).unwrap();
+
+            zip.start_file("test-mod_1.0.0/data.lua", options).unwrap();
+            zip.write_all(b"-- data file").unwrap();
+
+            zip.finish().unwrap();
+        }
+
+        // ModLoaderで読み込み
+        let mut mod_info = crate::services::mod_loader::ModLoader::load_from_zip(source_zip_path.to_str().unwrap()).unwrap();
+        mod_info.source_path = source_zip_path.to_str().unwrap().to_string();
+
+        let translations = vec![
+            TranslationItem {
+                section: "item-name".to_string(),
+                key: "iron-plate".to_string(),
+                source_text: "Iron Plate".to_string(),
+                translated_text: "鉄板".to_string(),
+                vanilla_translation: None,
+                source: TranslationSource::API,
+                is_edited: false,
+            }
+        ];
+
+        let output_zip_path = dir.path().join("test-mod_ja.zip");
+        let ctx = LogContext::new("test");
+        let result = save_to_zip(&mod_info, &translations, "ja", output_zip_path.to_str().unwrap(), &ctx);
+        assert!(result.is_ok());
+        assert!(output_zip_path.exists());
+        // output_file
+        let output_file = fs::File::open(&output_zip_path).unwrap();
+        let mut output_archive = zip::ZipArchive::new(output_file).unwrap();
+
+        // locale/ja/strings.cfgが含まれているか確認
+        {
+            let mut ja_cfg = output_archive.by_name("test-mod_1.0.0/locale/ja/strings.cfg").unwrap();
+            let mut content = String::new();
+            ja_cfg.read_to_string(&mut content).unwrap();
+            assert!(content.contains("iron-plate=鉄板"));
+        }
+
+        // info.jsonも含まれているか確認
+        {
+            let mut info = output_archive.by_name("test-mod_1.0.0/info.json").unwrap();
+            let mut info_content = String::new();
+            info.read_to_string(&mut info_content).unwrap();
+            assert!(info_content.contains("test-mod"));
+        }
+
+        // data.luaも含まれているか確認
+        {
+            let mut data_lua = output_archive.by_name("test-mod_1.0.0/data.lua").unwrap();
+            let mut data_content = String::new();
+            data_lua.read_to_string(&mut data_content).unwrap();
+            assert!(data_content.contains("-- data file"));
+        }
     }
 }
