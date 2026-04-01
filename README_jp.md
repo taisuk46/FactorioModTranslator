@@ -61,6 +61,32 @@ npm run tauri build
 
 Windows 10以降ではWebView2が標準搭載されているため、追加のランタイムインストールは不要です。
 
+## テスト
+
+### E2Eテスト（GUI）
+
+Tauri APIをモックし、PlaywrightでフロントエンドのUIをテストします。
+
+```bash
+# ヘッドレスで全テスト実行
+npm run test:e2e
+
+# ブラウザ表示付きで実行（動作確認用）
+npm run test:e2e:headed
+
+# Playwright UIで対話的に実行
+npm run test:e2e:ui
+
+# テストレポートを表示
+npm run test:e2e:report
+```
+
+### Rust単体テスト
+
+```bash
+cd src-tauri && cargo test
+```
+
 ## ログ出力
 
 アプリケーションのログは以下の場所に出力されます:
