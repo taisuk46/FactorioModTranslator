@@ -6,19 +6,27 @@
   "scripts": {
     "tauri": "tauri",
     "dev": "tauri dev",
-    "build": "tauri build"
+    "build": "tauri build",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "npx playwright show-report tests/e2e-report",
+    "test:e2e:headed": "playwright test --headed"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2",
-    "sharp": "^0.34.5"
+    "@playwright/test": "^1.59.0",
+    "@tauri-apps/cli": "^2.10.1",
+    "sharp": "^0.34.5",
+    "vite": "^8.0.3"
   },
   "dependencies": {
     "@tauri-apps/plugin-log": "^2.8.0"
   },
   "optionalDependencies": {
-    "@img/sharp-win32-x64": "^0.34.5",
+    "@img/sharp-linux-x64": "^0.34.5",
     "@img/sharp-linux-arm64": "^0.34.5",
-    "@tauri-apps/cli-win32-x64-msvc": "^2.10.1",
-    "@tauri-apps/cli-linux-arm64-gnu": "^2.10.1"
+    "@img/sharp-win32-x64": "^0.34.5",
+    "@tauri-apps/cli-linux-x64-gnu": "^2.10.1",
+    "@tauri-apps/cli-linux-arm64-gnu": "^2.10.1",
+    "@tauri-apps/cli-win32-x64-msvc": "^2.10.1"
   }
 }
