@@ -59,6 +59,13 @@ npm run tauri build
 - **実行ファイル**: `src-tauri/target/release/factoriomodtranslator.exe`
 - **NSISインストーラ**: `src-tauri/target/release/bundle/nsis/FactorioModTranslator_x.x.x_x64-setup.exe` (~3.5MB)
 
+### トラブルシューティング
+`cargo` や `rustup` が見つからない旨のエラーが出る場合は、Rustの環境設定を読み込んでください:
+
+```bash
+source "$HOME/.cargo/env"
+```
+
 Windows 10以降ではWebView2が標準搭載されているため、追加のランタイムインストールは不要です。
 
 ## テスト

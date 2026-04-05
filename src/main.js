@@ -283,84 +283,159 @@ function renderPreview() {
     fileHeader.className = 'file-header';
     list.appendChild(fileHeader);
 
+    const wrapper = document.createElement('div');
+    wrapper.className = 'data-table-wrapper';
+
     const table = document.createElement('table');
     table.className = 'data-table';
     table.innerHTML = `
       <thead>
         <tr>
-          <th style="width: 25%">Key</th>
-          <th style="width: 35%">Source Text</th>
-          <th style="width: 40%">Translation</th>
+          <th class="row-number">#</th>
+          <th class="row-key">Key</th>
+          <th class="row-source">Source Text</th>
+          <th class="row-target">Translation</th>
         </tr>
       </thead>
       <tbody></tbody>
     `;
     const tbody = table.querySelector('tbody');
 
-    file.entries.forEach(entry => {
-      // Add to lastResults so it can be saved even if not auto-translated
+    file.entries.forEach((entry, index) => {
       lastResults.push({
         section: entry.section,
         key: entry.key,
         source_text: entry.value,
-        translated_text: entry.value, // Default to original for manual edit
+        translated_text: entry.value,
         source: 'Manual',
         is_edited: false
       });
 
       const row = document.createElement('tr');
-      row.innerHTML = `
-        <td class="row-key">${entry.section} > ${entry.key}</td>
-        <td class="row-source">${entry.value}</td>
-        <td class="row-target"><textarea class="auto-height" style="margin:0; width:100%">${entry.value}</textarea></td>
-      `;
-      const textarea = row.querySelector('textarea');
+      const rowNum = lastResults.length;
+      row.dataset.index = lastResults.length - 1;
+
+      const numCell = document.createElement('td');
+      numCell.className = 'row-number';
+      numCell.innerText = rowNum;
+
+      const keyCell = document.createElement('td');
+      keyCell.className = 'row-key';
+      keyCell.title = `${entry.section} > ${entry.key}`;
+      keyCell.innerText = `${entry.section} > ${entry.key}`;
+
+      const sourceCell = document.createElement('td');
+      sourceCell.className = 'row-source';
+      sourceCell.innerText = entry.value;
+
+      const targetCell = document.createElement('td');
+      targetCell.className = 'row-target';
+
+      const textarea = document.createElement('textarea');
+      textarea.value = entry.value;
       textarea.addEventListener('input', () => autoResize(textarea));
-      // Initial resize
-      setTimeout(() => autoResize(textarea), 0);
-      
+
+      targetCell.appendChild(textarea);
+
+      row.appendChild(numCell);
+      row.appendChild(keyCell);
+      row.appendChild(sourceCell);
+      row.appendChild(targetCell);
+
+      row.addEventListener('click', () => {
+        document.querySelectorAll('.data-table tr.selected').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+        textarea.focus();
+      });
+
       tbody.appendChild(row);
     });
-    list.appendChild(table);
+
+    wrapper.appendChild(table);
+    list.appendChild(wrapper);
+
+    setTimeout(() => {
+      const textareas = list.querySelectorAll('textarea');
+      textareas.forEach(ta => autoResize(ta));
+    }, 0);
   });
 }
 
 function renderResults(results) {
   const list = document.getElementById('translation-list');
-  list.innerHTML = '<div class="panel-header"><h3 class="panel-title">Translation Results</h3></div>';
-  
+  list.innerHTML = '';
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'data-table-wrapper';
+
   const table = document.createElement('table');
   table.className = 'data-table';
   table.innerHTML = `
     <thead>
       <tr>
-        <th style="width: 20%">Key</th>
-        <th style="width: 30%">Source</th>
-        <th style="width: 40%">Translation</th>
-        <th style="width: 10%">Type</th>
+        <th class="row-number">#</th>
+        <th class="row-key">Key</th>
+        <th class="row-source">Source</th>
+        <th class="row-target">Translation</th>
+        <th style="width: 80px">Type</th>
       </tr>
     </thead>
     <tbody></tbody>
   `;
   const tbody = table.querySelector('tbody');
 
-  results.forEach(res => {
+  results.forEach((res, index) => {
     const row = document.createElement('tr');
-    const badgeClass = `badge-${res.source.toLowerCase().includes('vanilla') ? 'vanilla' : (res.source.toLowerCase().includes('api') ? 'api' : 'history')}`;
-    row.innerHTML = `
-      <td class="row-key">${res.section}.${res.key}</td>
-      <td class="row-source">${res.source_text}</td>
-      <td class="row-target"><textarea class="auto-height" style="margin:0; width:100%">${res.translated_text}</textarea></td>
-      <td><span class="badge ${badgeClass}">${res.source}</span></td>
-    `;
-    const textarea = row.querySelector('textarea');
+    row.dataset.index = index;
+
+    const numCell = document.createElement('td');
+    numCell.className = 'row-number';
+    numCell.innerText = index + 1;
+
+    const keyCell = document.createElement('td');
+    keyCell.className = 'row-key';
+    keyCell.title = `${res.section}.${res.key}`;
+    keyCell.innerText = `${res.section}.${res.key}`;
+
+    const sourceCell = document.createElement('td');
+    sourceCell.className = 'row-source';
+    sourceCell.innerText = res.source_text;
+
+    const targetCell = document.createElement('td');
+    targetCell.className = 'row-target';
+
+    const textarea = document.createElement('textarea');
+    textarea.value = res.translated_text;
     textarea.addEventListener('input', () => autoResize(textarea));
-    // Initial resize
-    setTimeout(() => autoResize(textarea), 0);
+
+    targetCell.appendChild(textarea);
+
+    const typeCell = document.createElement('td');
+    const badgeClass = `badge-${res.source.toLowerCase().includes('vanilla') ? 'vanilla' : (res.source.toLowerCase().includes('api') ? 'api' : 'history')}`;
+    typeCell.innerHTML = `<span class="badge ${badgeClass}">${res.source}</span>`;
+
+    row.appendChild(numCell);
+    row.appendChild(keyCell);
+    row.appendChild(sourceCell);
+    row.appendChild(targetCell);
+    row.appendChild(typeCell);
+
+    row.addEventListener('click', () => {
+      document.querySelectorAll('.data-table tr.selected').forEach(r => r.classList.remove('selected'));
+      row.classList.add('selected');
+      textarea.focus();
+    });
 
     tbody.appendChild(row);
   });
-  list.appendChild(table);
+
+  wrapper.appendChild(table);
+  list.appendChild(wrapper);
+
+  setTimeout(() => {
+    const textareas = list.querySelectorAll('textarea');
+    textareas.forEach(ta => autoResize(ta));
+  }, 0);
 }
 
 async function loadGlossary() {

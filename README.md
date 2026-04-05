@@ -62,7 +62,37 @@ npm run tauri build
 - **Executable**: `src-tauri/target/release/factoriomodtranslator.exe`
 - **NSIS Installer**: `src-tauri/target/release/bundle/nsis/FactorioModTranslator_x.x.x_x64-setup.exe` (~3.5MB)
 
-WebView2 runtime is pre-installed on Windows 10 and later, so no additional runtime installation is required.
+### Troubleshooting
+If you get an error about `cargo` or `rustc` not found, ensure Rust's bin directory is in your `$PATH`:
+```bash
+source "$HOME/.cargo/env"
+```
+
+## Testing
+
+### E2E Tests (GUI)
+
+Mock Tauri API and test frontend UI with Playwright.
+
+```bash
+# Run all tests headless
+npm run test:e2e
+
+# Run with visible browser (for debugging)
+npm run test:e2e:headed
+
+# Run interactively with Playwright UI
+npm run test:e2e:ui
+
+# Show test report
+npm run test:e2e:report
+```
+
+### Rust Unit Tests
+
+```bash
+cd src-tauri && cargo test
+```
 
 ## Logs
 
